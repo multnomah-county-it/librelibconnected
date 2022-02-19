@@ -1,0 +1,31 @@
+{ resource: '/user/patron',
+  fields:
+   { barcode: '03799995',
+     birthDate: '2007-03-02',
+     firstName: 'John',
+     middleName: 'Clark',
+     lastName: 'Houser',
+     address1:
+      [ { resource: '/user/patron/address1',
+          fields:
+           { code: { resource: '/policy/patronAddress1', key: 'STREET' },
+             data: '925 NW Hoyt St Apt 406' } },
+        { resource: '/user/patron/address1',
+          fields:
+           { code: { resource: '/policy/patronAddress1', key: 'CITY/STATE' },
+             data: 'Portland, OR' } },
+        { resource: '/user/patron/address1',
+          fields:
+           { code: { resource: '/policy/patronAddress1', key: 'EMAIL' },
+             data: 'john.houser@multco.us' } },
+        { resource: '/user/patron/address1',
+          fields:
+           { code: { resource: '/policy/patronAddress1', key: 'ZIP' },
+             data: '97209' } } ],
+     library: { resource: '/policy/library', key: 'MID' },
+     profile: { resource: '/policy/userProfile', key: '1_MULT_Y' },
+     pin: '03022007',
+     category01: { resource: '/policy/patronCategory01', key: '0_MULT' },
+     category02: { resource: '/policy/patronCategory02', key: 'US_MAIL' },
+     category03: { resource: '/policy/patronCategory03', key: '03-PSD' },
+     category07: { resource: '/policy/patronCategory07', key: 'CONNECT' } } }

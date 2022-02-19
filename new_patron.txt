@@ -1,0 +1,68 @@
+{
+          'fields' => {
+                        'category03' => {
+                                          'resource' => '/policy/patronCategory03',
+                                          'key' => '03-PSD'
+                                        },
+                        'firstName' => 'Elizabeth',
+                        'category01' => {
+                                          'key' => '0_MULT',
+                                          'resource' => '/policy/patronCategory01'
+                                        },
+                        'category02' => {
+                                          'key' => 'US_MAIL',
+                                          'resource' => '/policy/patronCategory02'
+                                        },
+                        'library' => {
+                                       'key' => '',
+                                       'resource' => '/policy/library'
+                                     },
+                        'pin' => '04112013',
+                        'barcode' => '03799994',
+                        'birthDate' => '2013-04-11',
+                        'address1' => [
+                                        {
+                                          'resource' => '/user/patron/address1',
+                                          'fields' => {
+                                                        'code' => {
+                                                                    'key' => 'STREET',
+                                                                    'resource' => '/policy/patronAddress1'
+                                                                  },
+                                                        'data' => '14050 E Burnsides St Apt 211'
+                                                      }
+                                        },
+                                        {
+                                          'resource' => '/user/patron/address1',
+                                          'fields' => {
+                                                        'code' => {
+                                                                    'key' => 'CITY/STATE',
+                                                                    'resource' => '/policy/patronAddress1'
+                                                                  },
+                                                        'data' => 'Portland, OR'
+                                                      }
+                                        },
+                                        {
+                                          'resource' => '/user/patron/address1',
+                                          'fields' => {
+                                                        'code' => {
+                                                                    'key' => 'ZIP',
+                                                                    'resource' => '/policy/patronAddress1'
+                                                                  },
+                                                        'data' => '97233'
+                                                      }
+                                        },
+                                        undef
+                                      ],
+                        'middleName' => 'null',
+                        'category07' => {
+                                          'key' => 'CONNECT',
+                                          'resource' => '/policy/patronCategory07'
+                                        },
+                        'profile' => {
+                                       'key' => '',
+                                       'resource' => '/policy/userProfile'
+                                     },
+                        'lastName' => 'Velasco Miguel'
+                      },
+          'resource' => '/user/patron'
+        };

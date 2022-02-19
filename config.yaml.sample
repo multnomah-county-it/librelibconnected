@@ -1,0 +1,42 @@
+log_level: info
+service_account: libconnected
+incoming_path: /srv/libconnected
+smtp:
+  hostname: email-smtp.us-west-2.amazonaws.com
+  port: 587
+  from: LIBCONNECTED TEST<system_administrator@multco.us>
+  user: AKIA6ECMD5PVZZLWB3PN
+  pass: BE3yQPJwc2n7bYxZrycCHsfZ9USkE/2bUYbwlYktG/7S
+admin_contact: Some Person<some.person@domain>
+local_timezone: America/Los_Angeles
+ilsws:
+  username: USERNAME
+  password: PASSWORD
+  hostname: host.domain
+  port: 443
+  webapp: library_ilsws
+  client_id: CLIENT_ID
+  user_privilege_override: PASSWORD
+  timeout: 20
+clients:
+  - id: '40'
+    authorized_key: KEY
+    namespace: pps
+    schema: district
+    name: DDSD
+    contact: Some Person <some.person@domain>
+    new_defaults:
+      home_library: MID
+      user_profile: 0_MULT
+      youth_profile: 1_MULT_Y
+      user_categories:
+        1: 0_MULT
+        2: US_MAIL
+        3: 40-DDSD
+        7: CONNECT
+    overlay_defaults:
+      user_profile: 0_MULT
+      youth_profile: 1_MULT_Y
+      user_categories:
+        3: 40-DDSD
+        7: CONNECT
