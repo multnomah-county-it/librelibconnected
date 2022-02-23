@@ -187,7 +187,7 @@ unlink $csv_file || &error_handler("Could not delete csv_file: $!");
 #
 ###############################################################################
 # Process a student. This is where we decide if we are going to update (overlay),
-# create a new record, or log as ambiguous.
+# create a new record, or log only as ambiguous.
 
 sub process_student {
   my $token = shift;
@@ -661,7 +661,8 @@ sub validate_dob {
 }
 
 ###############################################################################
-#
+# TO DO: better validation. Right now, only checks for @ symbol
+
 sub validate_email {
   my $value = shift;
 
@@ -676,6 +677,7 @@ sub validate_email {
 
 ###############################################################################
 # Required first_name, max 20 characters
+
 sub validate_first_name {
   my $value = shift;
   my $retval = 0;
@@ -689,6 +691,7 @@ sub validate_first_name {
 
 ###############################################################################
 # Not required middle_name, max 20 characters. Return null if not supplied.
+
 sub validate_middle_name {
   my $value = shift;
 
@@ -701,6 +704,7 @@ sub validate_middle_name {
 
 ###############################################################################
 # Required last_name, max 60 characters
+
 sub validate_last_name {
   my $value = shift;
   my $retval = 0;
@@ -713,7 +717,8 @@ sub validate_last_name {
 }
 
 ###############################################################################
-#
+# Use the AddressFormat.pm function to validate and reformat to USPS standards
+
 sub validate_address {
   my $value = shift;
 
@@ -721,7 +726,8 @@ sub validate_address {
 }
 
 ###############################################################################
-#
+# Use the AddressFormat.pm function to validate and reformat to USPS standard
+
 sub validate_city {
   my $value = shift;
 
@@ -729,7 +735,8 @@ sub validate_city {
 }
 
 ###############################################################################
-#
+# Use the AddressFormatpm function to validate and reformat to USPS standard
+
 sub validate_state {
   my $value = shift;
 
