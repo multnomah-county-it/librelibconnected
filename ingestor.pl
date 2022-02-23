@@ -7,6 +7,7 @@
 # Pragmas 
 use strict;
 use warnings;
+use utf8;
 
 # Load modules
 use File::Basename;
@@ -18,7 +19,8 @@ use AddressFormat;
 use ILSWS;
 use Email::Mailer;
 use Switch;
-use Data::Dumper;
+use Data::Dumper qw(Dumper);
+use Unicode::Normalize;
 
 # Constants we might want to edit if we moved the application
 my $mail_prog = '/usr/bin/mail';
@@ -51,7 +53,7 @@ my $file_size = -s $data_file;
 my $yaml = YAML::Tiny->read("$base_path/config.yaml");
 
 # Set the log level: $INFO, $WARN, $ERROR, $DEBUG, $FATAL
-# Anything below this level will be logged
+# based on the log level in config.yaml
 switch( $yaml->[0]->{'log_level'} ) {
   case 'info' { $log->level($INFO) }
   case 'warn' { $log->level($WARN) }
@@ -184,7 +186,9 @@ unlink $csv_file || &error_handler("Could not delete csv_file: $!");
 ###############################################################################
 #
 ###############################################################################
-# Process a student
+# Process a student. This is where we decide if we are going to update (overlay),
+# create a new record, or log as ambiguous.
+
 sub process_student {
   my $token = shift;
   my $client = shift;
@@ -196,8 +200,11 @@ sub process_student {
   if ( $existing->{'totalResults'} == 1 ) {
 
     # We found a student, so overlay (update) and return from this subroutine
-    my $key = $existing->{'result'}->[0]->{'key'};
-    &update_student($token, $client, $student, $key, 'Alt ID');
+    if ( defined $existing->{'result'}->[0]->{'key'} ) {
+      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID');
+    } else {
+      &error_handler("No key found in $existing");
+    }
     return 1;
   } 
 
@@ -211,8 +218,11 @@ sub process_student {
     # same email address then go on to the next search.
     if ( $existing->{'totalResults'} == 1 ) {
 
-      my $key = $existing->{'result'}->[0]->{'key'};
-      &update_student($token, $client, $student, $key, 'Email');
+      if ( defined $existing->{'result'}->[0]->{'key'} ) {
+        &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email');
+      } else {
+        &error_handler("No key found in $existing");
+      }
       return 1;
     }
   }
@@ -220,16 +230,25 @@ sub process_student {
   # Search by DOB and address
   $existing = &search($token, $client, $student);
 
-  if ( scalar(@{$existing}) == 1 ) {
+  if ( $#{$existing} == 0 ) {
 
     # Looks like this student may have moved
-    my $key = $existing->[0]->{'key'};
-    &update_student($token, $client, $student, $key, 'DOB and Street');
+    if ( defined $existing->[0]->{'key'} ) {
+      &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street');
+    } else {
+      &error_handler("No key found in $existing");
+    }
+
+  } elsif ( $#{$existing} > 0 ) {
+
+    # We got multiple matches, so reject the search results as ambiguous 
+    # and report the new student data in logs. This student
+    &logger('debug', qq|"AMBIGUOUS:","DOB and Street",| . &print_line($student));
+    $csv->info(qq|"Ambiguous","DOB and Street",| . &print_line($student));
 
   } else {
 
-    # All efforts to find this student failed, and we did not find possible
-    # duplicates, so add new record.
+    # All efforts to match this student failed, so create new record for them
     &create_student($token, $client, $student);
   }
 
@@ -264,31 +283,23 @@ sub search {
 
       if ( $#results >= 1 ) {
 
-        # We got multiple matches, so reject the search results as ambiguous 
-        # and report the new student data in logs. This student
-        &logger('warn', qq|"AMBIGUOUS:","DOB and Street",| . &print_line($student));
-        $csv->info(qq|"Ambiguous","DOB and Street",| . &print_line($student));
-
         # Now report the possible matches
         foreach my $i (0 .. $#results) {
 
           # Add each ambiguous record to the CSV log with the ID and name
           # information. Put the student ID in the the ID field along with the 
-          # matching record ID so that the CSV can be storted appropriately.
+          # matching record ID, so the CSV can be storted appropriately. Add 
+          # name and addresss from matching records.
           my $message = qq|"Ambiguous","DOB and Street",|;
-          $message   .= qq|"$student->{'student_id'} $results[$i]{'key'}",|;
+          $message   .= qq|"$student->{'student_id'}, $results[$i]{'key'}",|;
           $message   .= qq|"$results[$i]{'fields'}->{'firstName'}",|;
           if ( $results[$i]{'fields'}->{'middleName'} ) {
             $message   .= qq|"$results[$i]{'fields'}->{'middleName'}",|;
           }
           $message   .= qq|"$results[$i]{'fields'}->{'lastName'}",|;
-          $message   .= qq|"$results[$i]{'fields'}->{'address'}"|;
           $csv->info($message);
+          $log->debug(Dumper($results[$i]));
         }
-
-        # Set @results to an empty array, because we don't want to add
-        # a record when we get ambiguous results
-        @results = ();
       }
     }
   }
@@ -336,6 +347,10 @@ sub create_student {
   my $student_json = $json->pretty->encode($new_student);
   &logger('debug', $student_json);
 
+  # Remove diacritcs
+  $student_json = NFKD($student_json);
+  $student_json =~ s/\p{NonspacingMark}//g;
+
   # Send the patron JSON to ILSWS
   my $res = ILSWS::patron_create($token, $student_json);
 
@@ -376,6 +391,10 @@ sub update_student {
   my $student_json = $json->pretty->encode($new_student);
   &logger('debug', $student_json);
 
+  # Remove diacritcs
+  $student_json = NFKD($student_json);
+  $student_json =~ s/\p{NonspacingMark}//g;
+
   # Send the data to ILSWS
   my $res = ILSWS::patron_update($token, $student_json, $key);
 
@@ -395,7 +414,8 @@ sub update_student {
 }
 
 ###############################################################################
-# Create datastructure for ILSWS query to create or update student data
+# Create the datastructure for an ILSWS query to create or update a patron
+# record in Symphony
 
 sub create_data_structure {
   my $student = shift;
@@ -519,7 +539,7 @@ sub error_handler {
 ###############################################################################
 # Sends log messages to multiple logs as needed. Generally, we log to 
 # the permanent log and to the temporary log which will be mailed at the 
-# end of the ingest.
+# end of the ingest. Separate commands are used to send data to the CSV file.
 
 sub logger {
   my $level = shift;
@@ -559,6 +579,7 @@ sub check_schema {
 }
 
 ###############################################################################
+# Produces a line of student data in comma-delimited form
 
 sub print_line {
   my $student = shift;
@@ -577,7 +598,7 @@ sub print_line {
 # Checks if there is a function to validate a particular field. If there is
 # one, it runs it, passing in the value, which may be returned unchanged, 
 # returned reformatted, or returned as null (in which case an error should 
-# be returned by the calling code.
+# be returned by the calling code, if appropriate.)
 
 sub validate_field {
   my $field_name = shift;
