@@ -119,9 +119,6 @@ sub patron_search {
   my $data = &send_get("$base_URL/user/patron/search", $token, \%params);
 
   return $data;
-  # if (_.get(err, 'response.status') === 400) return [];
-  #     // TODO: 500 - "Unavailable for display" <-- user exists but indexed yet
-  #     if (_.get(err, 'response.status') === 500) return [];
 }
 
 ###############################################################################
@@ -140,34 +137,12 @@ sub patron_alt_id_search {
 
 sub patron_barcode_search {
   my $token = shift;
-  my $index = shift;
   my $value = shift; 
-  my $count = shift;
  
-  # Number of results to return
-  if ( ! $count ) {
-    $count = $DEFAULT_PATRON_SEARCH_COUNT;
-  }
-
-  # Fields to return in result
-  my $include_fields = join(',', @PATRON_INCLUDE_FIELDS);
-
-  # Define query parameters JSON
-  my %params = (
-    'q' => "$index:$value",
-    'rw' => 1,
-    'ct' => $count,
-    'includeFields' => $include_fields
-    );
-
   # Create request object
-  my $data = &send_get("$base_URL/user/patron/barcode", $token, \%params);
+  my $data = &send_get("$base_URL/user/patron/barcode/$value", $token);
 
-  if ( ! $data ) {
-    if ( $code == 404 ) {
-      $error = '';
-    }
-  }
+  # if ( ! $data && $code == 404 ) { $error = 'Barcode search returned 404'; }
 
   return $data;
 }
@@ -215,14 +190,16 @@ sub send_get {
   my $params = shift;
 
   # Encode the query parameters, as they will be sent in the URL
-  my $encoder = URI::Encode->new();
-  $URL .= "?";
-  foreach my $key ('q','rw','ct','includeFields') {
-    if ( $params->{$key} ) {
-      $URL .= "$key=" . $encoder->encode($params->{$key}) . '&';
+  if ( $params ) {
+    my $encoder = URI::Encode->new();
+    $URL .= "?";
+    foreach my $key ('q','rw','ct','includeFields') {
+      if ( $params->{$key} ) {
+        $URL .= "$key=" . $encoder->encode($params->{$key}) . '&';
+      }
     }
+    chop $URL;
   }
-  chop $URL;
 
   # Define the request headers
   my $req = HTTP::Request->new('GET', $URL);
