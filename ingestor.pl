@@ -209,8 +209,8 @@ sub process_student {
 
     if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
+        return 1;
     }
-    return 1;
 
   } else {
     &logger('error', $ILSWS::error);
@@ -223,8 +223,8 @@ sub process_student {
     
     if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
+      return 1;
     }
-    return 1;
 
   } else {
     &logger('error', $ILSWS::error);
@@ -242,8 +242,8 @@ sub process_student {
       
       if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
+        return 1;
       }
-      return 1;
 
     } else {
       &logger('error', $ILSWS::error);
