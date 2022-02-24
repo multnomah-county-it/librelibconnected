@@ -2,7 +2,9 @@
 #
 # ReLibConnectEd Ingestor
 #
-# This script is run by relibconnected.pl when an upload file is detected.
+# This script is run by relibconnected.pl when an upload file is detected. It 
+# takes two required parameters, the absolute path to it's configuration file, 
+# config.yaml, and the absolute path to the data file to be ingested.
 #
 # Pragmas 
 use strict;
