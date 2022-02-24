@@ -22,35 +22,17 @@ use Switch;
 use Data::Dumper qw(Dumper);
 use Unicode::Normalize;
 
-# Constants we might want to edit if we moved the application
-my $mail_prog = '/usr/bin/mail';
-
-# Global variables we might edit if we moved the application
-our $base_path = '/opt/relibconnected';
+# Valid fields in uploaded CSV files
 my @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
 
-# Configure logging
-# Set the log module name
+# Read configuration file passed to this script as the first parameter
+my $config_file = $ARGV[0];
+my $yaml = YAML::Tiny->read($config_file);
+our $base_path = $yaml->[0]->{'base_path'};
+
+# Get the logging configuration from the log.conf file
 Log::Log4perl->init("$base_path/log.conf");
 our $log = get_logger('log');
-
-# Get the path to the student data file passed to script by relibconnected.pl
-my $data_file = $ARGV[0];
-
-# CSV file where we'll log updates and creates. Must match CSVFILE defined in
-# log.conf
-my $csv_file = "$base_path/log/ingestor.csv";
-
-# Mail log file which will be sent as body of report message. Must match MAILFILE
-# defined in log.conf
-my $mail_log = "$base_path/log/mail.log";
-
-# Check that the data file is readable
-unless ( -r $data_file ) { &error_handler("Could not read $data_file") }
-my $file_size = -s $data_file;
-
-# Read configuration file
-my $yaml = YAML::Tiny->read("$base_path/config.yaml");
 
 # Set the log level: $INFO, $WARN, $ERROR, $DEBUG, $FATAL
 # based on the log level in config.yaml
@@ -62,6 +44,21 @@ switch( $yaml->[0]->{'log_level'} ) {
   case 'fatal' { $log->level($FATAL) }
   else        { $log->level($DEBUG) }
 }
+
+# CSV file where we'll log updates and creates. Must match CSVFILE defined in
+# log.conf!
+my $csv_file = "$base_path/log/ingestor.csv";
+
+# Mail log file which will be sent as body of report message. Must match MAILFILE
+# defined in log.conf!
+my $mail_log = "$base_path/log/mail.log";
+
+# Get the path to the student data file passed to script by relibconnected.pl
+my $data_file = $ARGV[1];
+
+# Check that the data file is readable
+unless ( -r $data_file ) { &error_handler("Could not read $data_file") }
+my $file_size = -s $data_file;
 
 # Log start of ingest
 &logger('info', "Ingestor run on $data_file ($file_size bytes) started");
@@ -84,10 +81,10 @@ foreach my $i ( 0 .. $#{$clients} ) {
   }
 }
 
-# If we didn't find a matching configuration, throw an error
+# Die with an error, if we didn't find a matching configuration
 unless ( defined $client->{id} ) { &error_handler("Could not find configuration for $district") };
 
-# If we did, let the customer know
+# If we did find a configuration, let the customer know
 &logger('info', "Found configuration for $district");
 
 # Open the CVS data file supplied by calling script, relibconnected.pl
@@ -186,8 +183,9 @@ unlink $csv_file || &error_handler("Could not delete csv_file: $!");
 ###############################################################################
 #
 ###############################################################################
-# Process a student. This is where we decide if we are going to update (overlay),
-# create a new record, or log only as ambiguous.
+# Process a student. This is the core logic where we decide if we are going to 
+# update (overlay) a record, create a new record, or log the data only due to
+# multiple ambiguous matches.
 
 sub process_student {
   my $token = shift;
@@ -291,7 +289,7 @@ sub search {
           # matching record ID, so the CSV can be storted appropriately. Add 
           # name and addresss from matching records.
           my $message = qq|"Ambiguous","DOB and Street",|;
-          $message   .= qq|"$student->{'student_id'}, $results[$i]{'key'}",|;
+          $message   .= qq|"$client->{'id'}$student->{'student_id'}, $results[$i]{'key'}",|;
           $message   .= qq|"$results[$i]{'fields'}->{'firstName'}",|;
           if ( $results[$i]{'fields'}->{'middleName'} ) {
             $message   .= qq|"$results[$i]{'fields'}->{'middleName'}",|;

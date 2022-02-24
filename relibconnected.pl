@@ -12,17 +12,22 @@
 use strict;
 use File::Find;
 
-# Standard utilities
-our $touch = '/usr/bin/touch';
-our $rm = '/usr/bin/rm';
-
-# Global Variables
-our $base_path = '/opt/relibconnected';
-our $flag_file = "$base_path/run/ingestor.flag";
-our $ingestor = "$base_path/ingestor.pl";
-
-# Local variables
+# File paths. Edit if you move this application.
 my $srv_path = '/srv/libconnected';
+my $base_path = '/opt/relibconnected';
+
+# Don't change these unless you need to.
+my $config_file = "$base_path/config.yaml";
+my $flag_file = "$base_path/run/ingestor.flag";
+my $ingestor = "$base_path/ingestor.pl";
+
+# Standard utilities. Check to make sure these exist.
+my $touch = '/usr/bin/touch';
+my $rm = '/usr/bin/rm';
+
+###############################################################################
+# Do not edit below this point
+###############################################################################
 
 # Check if a flag file exists, indicating that an ingest is already in progress.
 if ( -e $flag_file ) {
@@ -47,7 +52,7 @@ sub wanted {
     # Run the ingestor script. We do not pass the file found as a parameter
     # because the $ingestor will do it's own check for upload files and 
     # potentially load more than one.
-    system("$ingestor $File::Find::dir/$_") == 0 || die "ERROR: $ingestor failed";
+    system("$ingestor $config_file $File::Find::dir/$_") == 0 || die "ERROR: $ingestor failed";
 
     # Delete the flag file.
     system("$rm $flag_file") == 0 || die "ERROR: Could not remove $flag_file";
