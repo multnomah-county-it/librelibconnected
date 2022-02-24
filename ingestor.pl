@@ -23,7 +23,7 @@ use Data::Dumper qw(Dumper);
 use Unicode::Normalize;
 
 # Valid fields in uploaded CSV files
-my @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
+our @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
 
 # Read configuration file passed to this script as the first parameter
 my $config_file = $ARGV[0];
@@ -97,7 +97,6 @@ my $parser = Parse::CSV->new( handle => $data_fh, sep_char => ',', names => 1 );
 # Start the CVS file output with the column headers
 my $csv = get_logger('csv');
 $csv->info('"action","match","' . join('","', @valid_fields) . '"');
-
 
 # Check that we're receiving the right fields in the right order
 my @fields = $parser->fields;
@@ -176,7 +175,7 @@ unlink $mail_log || &error_handler("Could not delete mail.log: $!");
 unlink $csv_file || &error_handler("Could not delete csv_file: $!");
 
 # Delete the ingest data file
-#unlink "$data_file" || &error_handler("Could not delete data file: $!");
+unlink "$data_file" || &error_handler("Could not delete data file: $!");
 
 ###############################################################################
 # Subroutines
