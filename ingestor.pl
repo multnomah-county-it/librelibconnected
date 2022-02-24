@@ -2,7 +2,9 @@
 #
 # ReLibConnectEd Ingestor
 #
-# This script is run by relibconnected.pl when an upload file is detected.
+# This script is run by relibconnected.pl when an upload file is detected. It 
+# takes two required parameters, the absolute path to it's configuration file, 
+# config.yaml, and the absolute path to the data file to be ingested.
 #
 # Pragmas 
 use strict;
@@ -118,6 +120,14 @@ while ( my $student = $parser->fetch ) {
   my $errors = 0;
   foreach my $key (keys %{$student}) {
 
+    # If the student has no address (a private address), then set the address
+    # to the ISOM Building.
+    if ( ! $student->{'address'} && ! $student->{'city'} && ! $student->{'zipcode'} ) {
+      $student->{'address'} = '205 NE Russell St';
+      $student->{'city'} = 'Portland';
+      $student->{'zipcode'} = '97212';
+    }
+
     # Validate and reformat data in each field, as necessary
     my $validate = &validate_field($key, $student->{$key});
 
@@ -195,16 +205,30 @@ sub process_student {
   # Check for existing patron with same student ID in the ALT_ID field
   my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", 1);
 
-  if ( $existing->{'totalResults'} == 1 ) {
+  if ( $existing ) {
 
-    # We found a student, so overlay (update) and return from this subroutine
-    if ( defined $existing->{'result'}->[0]->{'key'} ) {
-      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
-    } else {
-      &error_handler("No key found in $existing");
+    if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+        &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
     }
     return 1;
+
+  } else {
+    &logger('error', $ILSWS::error);
   } 
+
+  # Check for existing patron with same student ID in the ID field (barcode)
+  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}");
+
+  if ( $existing ) {
+    
+    if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
+    }
+    return 1;
+
+  } else {
+    &logger('error', $ILSWS::error);
+  }
 
   # Search for the student via email address
   if ( $student->{'email'} ne 'null' ) {
@@ -214,14 +238,15 @@ sub process_student {
     # If there is only one record with this student ID, overlay the record and
     # return from the subroutine. If there is more than one person using the 
     # same email address then go on to the next search.
-    if ( $existing->{'totalResults'} == 1 ) {
-
-      if ( defined $existing->{'result'}->[0]->{'key'} ) {
+    if ( $existing ) {
+      
+      if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
-      } else {
-        &error_handler("No key found in $existing");
       }
       return 1;
+
+    } else {
+      &logger('error', $ILSWS::error);
     }
   }
 
@@ -233,8 +258,6 @@ sub process_student {
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
-    } else {
-      &error_handler("No key found in $existing");
     }
 
   } elsif ( $#{$existing} > 0 ) {

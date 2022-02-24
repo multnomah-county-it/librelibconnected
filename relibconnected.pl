@@ -5,14 +5,15 @@
 # John Houser
 # john.houser@multco.us
 # 
-# This script checks for uploaded student data files in $path and starts 
+# This script checks for uploaded student data files in $srv_path and starts 
 # the ingester process. Run this script via cron job, as the libconnected 
 # user, every five minutes or so.
 #
 use strict;
 use File::Find;
 
-# File paths. Edit if you move this application.
+# File paths. Edit if you move this application or the path to search for 
+# data files to ingest.
 my $srv_path = '/srv/libconnected';
 my $base_path = '/opt/relibconnected';
 
