@@ -134,12 +134,12 @@ while ( my $student = $parser->fetch ) {
 
     # We got errors when validating this student's data, so log and skip 
     # this record
-    &logger('error', "Skipping $student->{'last_name'}, $student->{'first_name'} ($student->{'student_id'}) due to data error(s)");
+    &logger('error', "Skipping $student->{'last_name'}, $student->{'first_name'} ($student->{'student_id'} at line $lineno) due to data error(s)");
 
   } else {
 
     # Process the student record
-    &process_student($token, $client, $student);
+    &process_student($token, $client, $student, $lineno);
   }
 
   $lineno++;
@@ -190,6 +190,7 @@ sub process_student {
   my $token = shift;
   my $client = shift;
   my $student = shift;
+  my $lineno = shift;
 
   # Check for existing patron with same student ID in the ALT_ID field
   my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", 1);
@@ -198,7 +199,7 @@ sub process_student {
 
     # We found a student, so overlay (update) and return from this subroutine
     if ( defined $existing->{'result'}->[0]->{'key'} ) {
-      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID');
+      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
     } else {
       &error_handler("No key found in $existing");
     }
@@ -216,7 +217,7 @@ sub process_student {
     if ( $existing->{'totalResults'} == 1 ) {
 
       if ( defined $existing->{'result'}->[0]->{'key'} ) {
-        &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email');
+        &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
       } else {
         &error_handler("No key found in $existing");
       }
@@ -231,7 +232,7 @@ sub process_student {
 
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
-      &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street');
+      &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
     } else {
       &error_handler("No key found in $existing");
     }
@@ -246,7 +247,7 @@ sub process_student {
   } else {
 
     # All efforts to match this student failed, so create new record for them
-    &create_student($token, $client, $student);
+    &create_student($token, $client, $student, $lineno);
   }
 
   return 1;
@@ -288,7 +289,7 @@ sub search {
           # matching record ID, so the CSV can be storted appropriately. Add 
           # name and addresss from matching records.
           my $message = qq|"Ambiguous","DOB and Street",|;
-          $message   .= qq|"$client->{'id'}$student->{'student_id'}, $results[$i]{'key'}",|;
+          $message   .= qq|"$student->{'student_id'}, $results[$i]{'key'}",|;
           $message   .= qq|"$results[$i]{'fields'}->{'firstName'}",|;
           if ( $results[$i]{'fields'}->{'middleName'} ) {
             $message   .= qq|"$results[$i]{'fields'}->{'middleName'}",|;
@@ -333,6 +334,7 @@ sub create_student {
   my $token = shift;
   my $client = shift;
   my $student = shift;
+  my $lineno = shift;
 
   my $csv = get_logger('csv');
   my $json = JSON->new->allow_nonref;
@@ -363,7 +365,7 @@ sub create_student {
   } else {
 
     # Whoops!
-    &logger('error', "Failed to create $client->{'id'}$student->{'student_id'}: " . &print_line($student));
+    &logger('error', "Failed to create $client->{'id'}$student->{'student_id'} (line $lineno): " . &print_line($student));
     &logger('error', $ILSWS::error);
   }
 }
@@ -377,6 +379,7 @@ sub update_student {
   my $student = shift;
   my $key = shift;
   my $match = shift;
+  my $lineno = shift;
 
   my $json = JSON->new->allow_nonref;
   my $csv = get_logger('csv');
@@ -405,7 +408,7 @@ sub update_student {
 
   } else {
 
-    &logger('error', "Failed to update $client->{'id'}$student->{'student_id'}: " . &print_line($student));
+    &logger('error', "Failed to update $client->{'id'}$student->{'student_id'} (line $lineno): " . &print_line($student));
     &logger('error', $ILSWS::error);
   }
 }
@@ -440,10 +443,10 @@ sub create_data_structure {
   $new_student{'fields'}{'birthDate'} = $student->{'dob'};
   $new_student{'fields'}{'pin'} = "${mon}${day}${year}";
 
-  if ( $mode eq 'new_defaults' ) {
-    $new_student{'fields'}{'category01'}{'resource'} = '/policy/patronCategory01';
-    $new_student{'fields'}{'category01'}{'key'} = $client->{'new_defaults'}->{'user_categories'}->{'1'};
+  $new_student{'fields'}{'category01'}{'resource'} = '/policy/patronCategory01';
+  $new_student{'fields'}{'category01'}{'key'} = $client->{$mode}->{'user_categories'}->{'1'};
 
+  if ( $mode eq 'new_defaults' ) {
     $new_student{'fields'}{'category02'}{'resource'} = '/policy/patronCategory02';
     $new_student{'fields'}{'category02'}{'key'} = $client->{'new_defaults'}->{'user_categories'}->{'2'};
   }
@@ -462,7 +465,7 @@ sub create_data_structure {
   }
 
   $new_student{'fields'}{'library'}{'resource'} = '/policy/library';
-  $new_student{'fields'}{'library'}{'key'} = $client->{'new_defaults'}->{'home_library'};
+  $new_student{'fields'}{'library'}{'key'} = $client->{$mode}->{'home_library'};
 
   my %street = ();
   $street{'resource'} = '/user/patron/address1';
