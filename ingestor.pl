@@ -171,6 +171,8 @@ my @valid_addresses = ();
 foreach my $i (0 .. $#addresses) {
   if ( &validate_email($addresses[$i]) ) {
     push @valid_addresses, $addresses[$i];
+  } else {
+    &logger('error', "Invalid email address in configuration: $addresses[$i]");
   }
 }
 
@@ -707,7 +709,9 @@ sub validate_dob {
 sub validate_email {
   my $value = shift;
 
-  $value = Email::Valid->address($value) ? $value : '';
+  if ( $value ) {
+    $value = Email::Valid->address($value) ? $value : '';
+  }
 
   return $value;
 }
