@@ -50,6 +50,11 @@ switch( $yaml->[0]->{'log_level'} ) {
   else        { $log->level($DEBUG) }
 }
 
+# Validate email from address before starting.
+if ( &validate_email($yaml->[0]->{'smtp'}->{'from'}) eq 'null' ) {
+  &error_handler("Invalid from address in configuration: $yaml->[0]->{'smtp'}->{'from'}");
+}
+
 # CSV file where we'll log updates and creates. Must match CSVFILE defined in
 # log.conf!
 my $csv_file = "$base_path/log/ingestor.csv";
@@ -135,7 +140,7 @@ while ( my $student = $parser->fetch ) {
     # Validate and reformat data in each field, as necessary
     my $validate = &validate_field($key, $student->{$key});
 
-    # Log any errors
+    # Log any errors, except with email, because that field is not required.
     if ( ! $validate ) {
       &logger('error', "Invalid data in line $lineno, $key: " . $student->{$key});
       $errors++;
@@ -169,7 +174,7 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
 my @valid_addresses = ();
 foreach my $i (0 .. $#addresses) {
-  if ( &validate_email($addresses[$i]) ) {
+  if ( &validate_email($addresses[$i]) eq 'null' ) {
     push @valid_addresses, $addresses[$i];
   } else {
     &logger('error', "Invalid email address in configuration: $addresses[$i]");
@@ -180,7 +185,7 @@ foreach my $i (0 .. $#addresses) {
 # attachements
 my $mailer = Email::Mailer->new(
   to      => join(',', @valid_addresses),
-  from    => &validate_email($yaml->[0]->{'smtp'}->{'from'}),
+  from    => $yaml->[0]->{'smtp'}->{'from'},
   subject => "RELIBCONNECTED Ingest Report $client->{'name'} ($client->{'namespace'}$client->{'id'})",
   text    => "Log and CSV output files from RELIBCONNECT ingest.",
   attachments => [
@@ -710,7 +715,9 @@ sub validate_email {
   my $value = shift;
 
   if ( $value ) {
-    $value = Email::Valid->address($value) ? $value : '';
+    $value = Email::Valid->address($value) ? $value : 'null';
+  } else {
+    $value = 'null';
   }
 
   return $value;
