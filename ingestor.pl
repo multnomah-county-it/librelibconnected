@@ -115,7 +115,8 @@ if ( $token ) {
 }
 
 # Loop through lines of data and check for valid values. Ingest valid lines.
-my $lineno = 1;
+# The $lineno is a global so we can encorporate it into log or error messages.
+our $lineno = 1;
 while ( my $student = $parser->fetch ) {
   my $errors = 0;
   foreach my $key (keys %{$student}) {
@@ -149,7 +150,7 @@ while ( my $student = $parser->fetch ) {
   } else {
 
     # Process the student record
-    &process_student($token, $client, $student, $lineno);
+    &process_student($token, $client, $student);
   }
 
   $lineno++;
@@ -200,7 +201,6 @@ sub process_student {
   my $token = shift;
   my $client = shift;
   my $student = shift;
-  my $lineno = shift;
 
   # Check for existing patron with same student ID in the ALT_ID field
   my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", 1);
@@ -271,7 +271,7 @@ sub process_student {
   } else {
 
     # All efforts to match this student failed, so create new record for them
-    &create_student($token, $client, $student, $lineno);
+    &create_student($token, $client, $student);
   }
 
   return 1;
@@ -358,7 +358,6 @@ sub create_student {
   my $token = shift;
   my $client = shift;
   my $student = shift;
-  my $lineno = shift;
 
   my $csv = get_logger('csv');
   my $json = JSON->new->allow_nonref;
@@ -403,7 +402,6 @@ sub update_student {
   my $student = shift;
   my $key = shift;
   my $match = shift;
-  my $lineno = shift;
 
   my $json = JSON->new->allow_nonref;
   my $csv = get_logger('csv');
