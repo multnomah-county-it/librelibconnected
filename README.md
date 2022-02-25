@@ -4,17 +4,18 @@ Perl replacement for LibConnectEd
 John Houser
 john.houser@multco.us
 
-(This file looks better as raw, due to the trees.)
-
 This application monitors for school district uploaded CSV files in 
-/srv/libconnected, validates and reformats the data as needed, and updates or 
+*/srv/libconnected*, validates and reformats the data as needed, and updates or 
 creates records in SirsiDynix Symphony. Record searches, updates, and creates 
 are accomplished via the SirsiDynix Web Services API (ILSWS).
 
-BEFORE INSTALLATION
+# BEFORE INSTALLATION
 
 This application requires the following modules, which can be downloaded and
-installed from CPAN. Hint: sudo cpan install MODULE_NAME
+installed from CPAN. Hint: 
+```
+sudo cpan install MODULE_NAME
+```
 
 File::Basename
 Log::Log4perl
@@ -26,12 +27,12 @@ Switch
 Data::Dumper
 Unicode::Normalize
 
-INSTALLATION NOTES
+# INSTALLATION NOTES
 
-1. Copy relibconnected.pl, ingestor.pl, config.yaml.sample, and log.conf to the 
+1. Copy *relibconnected.pl*, *ingestor.pl*, *config.yaml.sample*, and *log.conf* to the 
 desired application directory, usually:
-/opt/relibconnected
-
+*/opt/relibconnected*
+```
 relibconnected/
 ├── AddressFormat.pm
 ├── ILSWS.pm
@@ -46,7 +47,7 @@ relibconnected/
 ├── relibconnected.pl
 └─ run
     └── ingestor.flag
-
+```
 The ingester.csv, mail.log, and ingester.flag files are created during an 
 ingest and deleted automatically afterward.
 
