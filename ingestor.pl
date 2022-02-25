@@ -197,7 +197,7 @@ try {
   # Mail the logs to the admin contact(s)
   $mailer->send;
 } catch {
-  &error_handler("Could not email logs: @_");
+  &error_handler("Could not email logs: $_");
 };
 
 # Delete the mail log and the CSV file
