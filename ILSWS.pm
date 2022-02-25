@@ -138,13 +138,9 @@ sub patron_alt_id_search {
 sub patron_barcode_search {
   my $token = shift;
   my $value = shift; 
+  my $count = shift;
  
-  # Create request object
-  my $data = &send_get("$base_URL/user/patron/barcode/$value", $token);
-
-  # if ( ! $data && $code == 404 ) { $error = 'Barcode search returned 404'; }
-
-  return $data;
+  return &patron_search($token, 'ID', $value, $count);
 }
 
 ###############################################################################
