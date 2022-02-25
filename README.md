@@ -17,16 +17,16 @@ installed from CPAN. Hint:
 sudo cpan install MODULE_NAME
 ```
 
--File::Find
--File::Basename
--Log::Log4perl
--YAML::Tiny
--Parse::CSV
--Date::Calc
--Email::Mailer
--Switch
--Data::Dumper
--Unicode::Normalize
+- File::Find
+- File::Basename
+- Log::Log4perl
+- YAML::Tiny
+- Parse::CSV
+- Date::Calc
+- Email::Mailer
+- Switch
+- Data::Dumper
+- Unicode::Normalize
 
 # Installation Notes
 
