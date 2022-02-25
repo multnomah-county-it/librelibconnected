@@ -216,20 +216,6 @@ sub process_student {
     &logger('error', $ILSWS::error);
   } 
 
-  # Check for existing patron with same student ID in the ID field (barcode)
-  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}");
-
-  if ( $existing ) {
-    
-    if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
-      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
-      return 1;
-    }
-
-  } else {
-    &logger('error', $ILSWS::error);
-  }
-
   # Search for the student via email address
   if ( $student->{'email'} ne 'null' ) {
 
@@ -248,6 +234,21 @@ sub process_student {
     } else {
       &logger('error', $ILSWS::error);
     }
+  }
+
+  # Check for existing patron with same student ID in the ID field (barcode)
+  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}", 1);
+
+  if ( $existing ) {
+
+    if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+      &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
+      return 1;
+    }
+
+  } else {
+
+    &logger('error', $ILSWS::error);
   }
 
   # Search by DOB and address
