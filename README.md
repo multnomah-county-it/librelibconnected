@@ -1,4 +1,4 @@
-# relibconnected
+# ReLibConnectEd
 Perl replacement for LibConnectEd
 
 John Houser
@@ -9,7 +9,7 @@ This application monitors for school district uploaded CSV files in
 creates records in SirsiDynix Symphony. Record searches, updates, and creates 
 are accomplished via the SirsiDynix Web Services API (ILSWS).
 
-# BEFORE INSTALLATION
+# Before Installation
 
 This application requires the following modules, which can be downloaded and
 installed from CPAN. Hint: 
@@ -27,7 +27,7 @@ Switch
 Data::Dumper
 Unicode::Normalize
 
-# INSTALLATION NOTES
+# Installation Notes
 
 1. Copy *relibconnected.pl*, *ingestor.pl*, *config.yaml.sample*, and *log.conf* to the 
 desired application directory, usually:
