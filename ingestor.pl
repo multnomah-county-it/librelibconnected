@@ -10,6 +10,7 @@
 use strict;
 use warnings;
 use utf8;
+use 5.010;
 
 # Load modules
 use File::Basename;
@@ -23,6 +24,7 @@ use Email::Mailer;
 use Switch;
 use Data::Dumper qw(Dumper);
 use Unicode::Normalize;
+use Email::Valid;
 
 # Valid fields in uploaded CSV files
 our @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
@@ -683,16 +685,12 @@ sub validate_dob {
 }
 
 ###############################################################################
-# TO DO: better validation. Right now, only checks for @ symbol
+# Checks for valid email address format, returns nothing if not valid
 
 sub validate_email {
   my $value = shift;
 
-  if ( ! $value ) {
-    $value = 'null';
-  } elsif ( $value !~ /\@/ ) {
-    $value = 0;
-  }
+  $value = Email::Valid->address($value) ? $value : '';
 
   return $value;
 }
