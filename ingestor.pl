@@ -167,9 +167,7 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 # Validate admin contact email addresses
 my @to_addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
 foreach my $i (0 .. $#to_addresses) {
-  if ( ! &validate_email($to_addresses[$i]) ) {
-    splice(@to_addresses, $i, 1);
-  }
+  $to_addresses[$i] = &validate_email($to_addresses[$i]);
 }
 
 # Send an email to the admin contact with the mail.log and ingester.csv files as
