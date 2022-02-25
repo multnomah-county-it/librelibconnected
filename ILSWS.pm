@@ -16,7 +16,7 @@ use JSON;
 
 # Define global constants
 our $DEFAULT_TIMEOUT = 20;
-our $DEFAULT_PATRON_SEARCH_COUNT = 10;
+our $DEFAULT_PATRON_SEARCH_COUNT = 1000;
 
 our @PATRON_INCLUDE_FIELDS = (
   'profile',
