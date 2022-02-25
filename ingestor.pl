@@ -10,6 +10,7 @@
 use strict;
 use warnings;
 use utf8;
+use 5.010;
 
 # Load modules
 use File::Basename;
@@ -23,6 +24,8 @@ use Email::Mailer;
 use Switch;
 use Data::Dumper qw(Dumper);
 use Unicode::Normalize;
+use Email::Valid;
+use Try::Tiny;
 
 # Valid fields in uploaded CSV files
 our @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
@@ -162,11 +165,20 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 # Tell'em we're finished
 &logger('info', "Ingestor run on $data_file finished");
 
-# Send an email to the admin contact with the mail.log and ingester.csv files as
+# Validate admin contact email addresses
+my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
+my @valid_addresses = ();
+foreach my $i (0 .. $#addresses) {
+  if ( &validate_email($addresses[$i]) ) {
+    push @valid_addresses, $addresses[$i];
+  }
+}
+
+# Prepare email to the admin contact with the mail.log and ingester.csv files as
 # attachements
-Email::Mailer->send(
-  to      => $yaml->[0]->{'admin_contact'},
-  from    => $yaml->[0]->{'smtp'}->{'from'},
+my $mailer = Email::Mailer->new(
+  to      => join(',', @valid_addresses),
+  from    => &validate_email($yaml->[0]->{'smtp'}->{'from'}),
   subject => "RELIBCONNECTED Ingest Report $client->{'name'} ($client->{'namespace'}$client->{'id'})",
   text    => "Log and CSV output files from RELIBCONNECT ingest.",
   attachments => [
@@ -180,6 +192,13 @@ Email::Mailer->send(
     },
   ],
 );
+
+try {
+  # Mail the logs to the admin contact(s)
+  $mailer->send;
+} catch {
+  &error_handler("Could not email logs: $_");
+};
 
 # Delete the mail log and the CSV file
 unlink $mail_log || &error_handler("Could not delete mail.log: $!");
@@ -683,16 +702,12 @@ sub validate_dob {
 }
 
 ###############################################################################
-# TO DO: better validation. Right now, only checks for @ symbol
+# Checks for valid email address format, returns nothing if not valid
 
 sub validate_email {
   my $value = shift;
 
-  if ( ! $value ) {
-    $value = 'null';
-  } elsif ( $value !~ /\@/ ) {
-    $value = 0;
-  }
+  $value = Email::Valid->address($value) ? $value : '';
 
   return $value;
 }
