@@ -4,10 +4,27 @@ Perl replacement for LibConnectEd
 John Houser
 john.houser@multco.us
 
+(This file looks better as raw, due to the trees.)
+
 This application monitors for school district uploaded CSV files in 
 /srv/libconnected, validates and reformats the data as needed, and updates or 
 creates records in SirsiDynix Symphony. Record searches, updates, and creates 
 are accomplished via the SirsiDynix Web Services API (ILSWS).
+
+BEFORE INSTALLATION
+
+This application requires the following modules, which can be downloaded and
+installed from CPAN. Hint: sudo cpan install MODULE_NAME
+
+File::Basename
+Log::Log4perl
+YAML::Tiny
+Parse::CSV
+Date::Calc
+Email::Mailer
+Switch
+Data::Dumper
+Unicode::Normalize
 
 INSTALLATION NOTES
 
