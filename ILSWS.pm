@@ -2,9 +2,11 @@ package ILSWS;
 
 my $LEVEL = 1;
 
-# Modules to use
+# Pragmas
 use strict;
 use warnings;
+
+# Modules required
 use LWP::UserAgent;
 use HTTP::Request;
 use XML::Hash::LX;
@@ -13,11 +15,8 @@ use URI::Encode;
 use JSON;
 
 # Define global constants
-our $DEFAULT_TIMEOUT = 20000;
-our $DEFAULT_TOKEN_EXPIRES = 180000;
-our $DEFAULT_MAX_RETRIES = 5;
-our $DEFAULT_MAX_CONCURRENT = 100;
-our $DEFAULT_PATRON_SEARCH_COUNT = 10;
+our $DEFAULT_TIMEOUT = 20;
+our $DEFAULT_PATRON_SEARCH_COUNT = 1000;
 
 our @PATRON_INCLUDE_FIELDS = (
   'profile',
@@ -61,8 +60,9 @@ sub ILSWS_connect {
   my $URL = "$base_URL/$action?$params";
 
   # Create user agent object
+  my $timeout = defined $yaml->[0]->{'ilsws'}->{'timeout'} ? $yaml->[0]->{'ilsws'}->{'timeout'} : $DEFAULT_TIMEOUT;
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{ilsws}->{timeout},
+    timeout => $timeout,
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https']
     );
@@ -100,9 +100,7 @@ sub patron_search {
   my $count = shift;
  
   # Number of results to return
-  if ( ! $count ) {
-    $count = $DEFAULT_PATRON_SEARCH_COUNT;
-  }
+  $count = defined $count ? $count : $DEFAULT_PATRON_SEARCH_COUNT;
 
   # Fields to return in result
   my $include_fields = join(',', @PATRON_INCLUDE_FIELDS);
