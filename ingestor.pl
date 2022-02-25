@@ -164,11 +164,19 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 # Tell'em we're finished
 &logger('info', "Ingestor run on $data_file finished");
 
+# Validate admin contact email addresses
+my @to_addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
+foreach my $i (0 .. $#to_addresses) {
+  if ( ! &validate_email($to_addresses[$i]) ) {
+    splice(@to_addresses, $i, 1);
+  }
+}
+
 # Send an email to the admin contact with the mail.log and ingester.csv files as
 # attachements
 Email::Mailer->send(
-  to      => $yaml->[0]->{'admin_contact'},
-  from    => $yaml->[0]->{'smtp'}->{'from'},
+  to      => join(',', @to_addresses),
+  from    => &validate_email($yaml->[0]->{'smtp'}->{'from'}),
   subject => "RELIBCONNECTED Ingest Report $client->{'name'} ($client->{'namespace'}$client->{'id'})",
   text    => "Log and CSV output files from RELIBCONNECT ingest.",
   attachments => [
