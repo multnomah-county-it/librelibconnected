@@ -25,6 +25,7 @@ use Switch;
 use Data::Dumper qw(Dumper);
 use Unicode::Normalize;
 use Email::Valid;
+use Try::Tiny;
 
 # Valid fields in uploaded CSV files
 our @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
@@ -165,15 +166,18 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 &logger('info', "Ingestor run on $data_file finished");
 
 # Validate admin contact email addresses
-my @to_addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
-foreach my $i (0 .. $#to_addresses) {
-  $to_addresses[$i] = &validate_email($to_addresses[$i]);
+my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
+my @valid_addresses = ();
+foreach my $i (0 .. $#addresses) {
+  if ( &validate_email($addresses[$i]) ) {
+    push @valid_addresses, $addresses[$i];
+  }
 }
 
-# Send an email to the admin contact with the mail.log and ingester.csv files as
+# Prepare email to the admin contact with the mail.log and ingester.csv files as
 # attachements
-Email::Mailer->send(
-  to      => join(',', @to_addresses),
+my $mailer = Email::Mailer->new(
+  to      => join(',', @valid_addresses),
   from    => &validate_email($yaml->[0]->{'smtp'}->{'from'}),
   subject => "RELIBCONNECTED Ingest Report $client->{'name'} ($client->{'namespace'}$client->{'id'})",
   text    => "Log and CSV output files from RELIBCONNECT ingest.",
@@ -188,6 +192,13 @@ Email::Mailer->send(
     },
   ],
 );
+
+try {
+  # Mail the logs to the admin contact(s)
+  $mailer->send;
+} catch {
+  &error_handler("Could not email logs: @_");
+};
 
 # Delete the mail log and the CSV file
 unlink $mail_log || &error_handler("Could not delete mail.log: $!");
