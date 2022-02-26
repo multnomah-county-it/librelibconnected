@@ -59,10 +59,10 @@ if ( &validate_email($yaml->[0]->{'smtp'}->{'from'}) eq 'null' ) {
 my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
 my @valid_addresses = ();
 foreach my $i (0 .. $#addresses) {
-  if ( &validate_email($addresses[$i]) eq 'null' ) {
+  if ( &validate_email($addresses[$i]) ne 'null' ) {
     push @valid_addresses, $addresses[$i];
   } else {
-    &logger('error', "Invalid email address in configuration: $addresses[$i]");
+    &error_handler("Invalid email address in configuration: $addresses[$i]");
   }
 }
 
