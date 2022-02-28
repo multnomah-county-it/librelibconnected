@@ -19,6 +19,7 @@ ilsws:
   client_id: CLIENT_ID
   user_privilege_override: OVERRIDE
   timeout: 20
+  max_retries: 3
 clients:
   - id: '01'
     authorized_key: SSH_KEY
