@@ -59,10 +59,10 @@ if ( &validate_email($yaml->[0]->{'smtp'}->{'from'}) eq 'null' ) {
 my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
 my @valid_addresses = ();
 foreach my $i (0 .. $#addresses) {
-  if ( &validate_email($addresses[$i]) eq 'null' ) {
+  if ( &validate_email($addresses[$i]) ne 'null' ) {
     push @valid_addresses, $addresses[$i];
   } else {
-    &logger('error', "Invalid email address in configuration: $addresses[$i]");
+    &error_handler("Invalid email address in configuration: $addresses[$i]");
   }
 }
 
@@ -321,7 +321,11 @@ sub search {
 
     # If we found a person or persons with student's DOB, then we continue
     # by searching via street.
-    my $bystreet = ILSWS::patron_search($token, 'STREET', $student->{'address'}, 1000);
+    
+    # Remove punctuation from address before searching
+    my $street = $student->{'address'};
+    $street =~ s/#//g;
+    my $bystreet = ILSWS::patron_search($token, 'STREET', $street, 1000);
 
     if ( $bystreet->{'totalResults'} >= 1 ) {
 
@@ -399,23 +403,31 @@ sub create_student {
   $student_json = NFKD($student_json);
   $student_json =~ s/\p{NonspacingMark}//g;
 
-  # Send the patron JSON to ILSWS
-  my $res = ILSWS::patron_create($token, $student_json);
+  # Set the max retries
+  my $max_retries = 3;
+  if ( defined $yaml->[0]->{'ilsws'}->{'max_retries'} ) {
+    $max_retries = $yaml->[0]->{'ilsws'}->{'max_retries'};
+  }
+
+  my $res = '';
+  my $retries = 1;
+  while (! $res && $retries <= $max_retries ) {
+    # Send the patron create JSON to ILSWS
+    $res = ILSWS::patron_create($token, $student_json);
+    if ( ! $res ) {
+      &logger('error', "Failed to create $client->{'id'}$student->{'student_id'} (line $lineno) on attempt $retries: " . &print_line($student));
+      &logger('error', "$ILSWS::code: $ILSWS::error");
+    }
+    $retries++;
+  }
 
   if ( $res ) {
-
     # We created a patron. Log the event.
     $csv->info('"Create","",' . &print_line($student));
     &logger(
       'debug', 
       "CREATE: $student->{'last_name'}, $student->{'first_name'} $student->{'student_id'} as $client->{'id'}$student->{'student_id'}"
       );
-
-  } else {
-
-    # Whoops!
-    &logger('error', "Failed to create $client->{'id'}$student->{'student_id'} (line $lineno): " . &print_line($student));
-    &logger('error', $ILSWS::error);
   }
 }
 
@@ -443,21 +455,31 @@ sub update_student {
   $student_json = NFKD($student_json);
   $student_json =~ s/\p{NonspacingMark}//g;
 
-  # Send the data to ILSWS
-  my $res = ILSWS::patron_update($token, $student_json, $key);
+  # Set the max retries
+  my $max_retries = 3;
+  if ( defined $yaml->[0]->{'ilsws'}->{'max_retries'} ) {
+    $max_retries = $yaml->[0]->{'ilsws'}->{'max_retries'};
+  }
+
+  my $res = '';
+  my $retries = 1;
+  while (! $res && $retries <= $max_retries ) {
+    # Send the patron update JSON to ILSWS
+    $res = ILSWS::patron_update($token, $student_json, $key);
+    if ( ! $res ) {
+      &logger('error', "Failed to update $client->{'id'}$student->{'student_id'} (line $lineno) on attempt $retries: " . &print_line($student));
+      &logger('error', "$ILSWS::code: $ILSWS::error");
+    }
+    $retries++;
+  }
 
   if ( $res ) {
-
+    # We got a result! Yay!
     $csv->info(qq|"Update","$match",| . &print_line($student));
     &logger(
       'debug', 
       "OVERLAY: $student->{'last_name'}, $student->{'first_name'} $student->{'student_id'} as $client->{'id'}$student->{'student_id'}"
       );
-
-  } else {
-
-    &logger('error', "Failed to update $client->{'id'}$student->{'student_id'} (line $lineno): " . &print_line($student));
-    &logger('error', $ILSWS::error);
   }
 }
 
