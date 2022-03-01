@@ -17,7 +17,7 @@ use File::Basename;
 use Log::Log4perl qw(get_logger :levels);
 use YAML::Tiny;
 use Parse::CSV;
-use Date::Calc qw(check_date Today leap_year Delta_Days);
+use Date::Calc qw(check_date Today leap_year Delta_Days Decode_Date_US);
 use AddressFormat;
 use ILSWS;
 use Email::Mailer;
@@ -28,7 +28,8 @@ use Email::Valid;
 use Try::Tiny;
 
 # Valid fields in uploaded CSV files
-our @valid_fields = qw(student_id first_name middle_name last_name address city state zipcode dob email);
+my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
+my @pps_schema      = qw(first_name middle_name last_name student_id address city state zipcode dob email);
 
 # Read configuration file passed to this script as the first parameter
 my $config_file = $ARGV[0];
@@ -115,13 +116,25 @@ open(my $data_fh, '<', $data_file)
 # Create CSV parser
 my $parser = Parse::CSV->new( handle => $data_fh, sep_char => ',', names => 1 );
 
+# Change all field names to lower case. The @fields array is global so it may
+# be used in multiple functions without passing it around.
+our @fields = $parser->names;
+foreach my $i ( 0 .. $#fields ) {
+  $fields[$i] = lc($fields[$i]);
+}
+$parser->names(@fields);
+&logger('debug', $parser->names);
+
+# Check that the field order matches the expected schema
+if ($client->{'schema'} eq 'district' ) {
+  unless ( &check_schema(\@fields, \@district_schema) ) { &error_handler("Fields in $data_file don't match expected schema") }
+} elsif ( $client->{'schema'} eq 'pps' ) {
+  unless ( &check_schema(\@fields, \@pps_schema) ) { &error_handler("Fields in $data_file don't match expected schema") }
+}
+
 # Start the CVS file output with the column headers
 my $csv = get_logger('csv');
-$csv->info('"action","match","' . join('","', @valid_fields) . '"');
-
-# Check that we're receiving the right fields in the right order
-my @fields = $parser->fields;
-unless ( &check_schema(@fields) ) { &error_handler("Fields in $data_file don't match expected schema") }
+$csv->info('"action","match","' . join('","', @fields) . '"');
 
 # Connect to ILSWS. The working copy of the module ILSWS.pm is stored in 
 # /usr/local/lib/site_perl. The copy in the working directory is only for
@@ -633,13 +646,14 @@ sub logger {
 # expected names in @valid_fields
 
 sub check_schema {
-  my @fields = @_;
+  my $fields = shift;
+  my $valid_fields = shift;
   my $errors = 0;
   my $retval = 0;
 
-  foreach my $i ( 0 .. $#fields ) {
-    if ( $fields[$i] ne $valid_fields[$i] ) {
-      &logger('error', "Invalid field in position $i") unless $fields[$i] eq $valid_fields[$i];
+  foreach my $i ( 0 .. $#{$fields} ) {
+    if ( $fields->[$i] ne $valid_fields->[$i] ) {
+      &logger('error', "Invalid field in position $i");
       $errors++;
     }
   }
@@ -655,7 +669,7 @@ sub print_line {
   my $student = shift;
 
   my $string = '';
-  foreach my $key (@valid_fields) {
+  foreach my $key (@fields) {
     $string .= qq|"$student->{$key}",|;
   }
   chop $string;
@@ -720,11 +734,21 @@ sub validate_zipcode {
 
 sub validate_dob {
   my $value = shift;
-  my $retval = 0;
+  my $retval = '';
+  my ($year, $mon, $day);
 
-  my ($mon, $day, $year) = split /\//, $value;
-  if ( check_date($year, $mon, $day) ) {
-    $retval = "$year-$mon-$day";
+  my $date = '';
+  if ( length($value) > 10 ) {
+    my @parts = split /\s/, $value;
+    $date = $parts[0];
+  }
+
+  if ( ($year, $mon, $day) = Decode_Date_US($date) ) {
+    if ( check_date($year, $mon, $day) ) {
+      $mon = sprintf("%02d", $mon);
+      $day = sprintf("%02d", $day);
+      $retval = "$year-$mon-$day";
+    }
   }
 
   return $retval;
