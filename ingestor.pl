@@ -96,9 +96,9 @@ my $namespace = substr($district, 0, -2);
 # See if we have a configuration from the YAML file that matches the district 
 # derived from the file path. If so, put the configuration in $client.
 my $client = ();
-my $clients = $yaml->[0]->{clients};
+my $clients = $yaml->[0]->{'clients'};
 foreach my $i ( 0 .. $#{$clients} ) {
-  if ( $clients->[$i]->{namespace} eq $namespace && $clients->[$i]->{id} eq $id ) {
+  if ( $clients->[$i]->{'namespace'} eq $namespace && $clients->[$i]->{'id'} eq $id ) {
      $client = $clients->[$i];
   }
 }
