@@ -8,6 +8,13 @@ smtp:
   from: LIBCONNECTED<some.user@domain>
   user: MAIL_USER
   pass: MAIL_PASSWORD
+mysql:
+  hostname: localhost
+  port: 3306
+  db_name: libconnected
+  db_username: libconnected
+  db_password: DATABASE_PASSWORD
+  max_checksum_age: 90
 admin_contact: Some User<some.user@domain>
 local_timezone: America/Los_Angeles
 ilsws:
