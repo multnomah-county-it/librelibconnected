@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# ReLibConnectEd Ingestor
+# ReLibConnectEd Ingestor 2.0
 #
 # This script is run by relibconnected.pl when an upload file is detected. It 
 # takes two required parameters, the absolute path to it's configuration file, 
@@ -26,6 +26,9 @@ use Data::Dumper qw(Dumper);
 use Unicode::Normalize;
 use Email::Valid;
 use Try::Tiny;
+use Digest::MD5 qw(md5_hex);
+use DBI;
+use DBD::mysql;
 
 # Valid fields in uploaded CSV files
 my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
@@ -123,7 +126,6 @@ foreach my $i ( 0 .. $#fields ) {
   $fields[$i] = lc($fields[$i]);
 }
 $parser->names(@fields);
-&logger('debug', $parser->names);
 
 # Check that the field order matches the expected schema
 if ($client->{'schema'} eq 'district' ) {
@@ -145,6 +147,12 @@ if ( $token ) {
 } else {
   &error_handler("Login to ILSWS failed: $ILSWS::error");
 }
+
+# Connect to checksums database which we'll use to store checksums for the
+# student data. By checking against the stored checksum, we can determine 
+# whether the student data has changed, therefore whether we need to update
+# Symphony via Web Services
+my $dbh = &connect_database;
 
 # Loop through lines of data and check for valid values. Ingest valid lines.
 # The $lineno is a global so we can encorporate it into log or error messages.
@@ -181,12 +189,18 @@ while ( my $student = $parser->fetch ) {
 
   } else {
 
-    # Process the student record
-    &process_student($token, $client, $student);
+    # Check the checksum database for changes to the data or for new data and 
+    # process the student record only if necessary
+    if ( &check_for_changes($student, $client, $dbh) ) {
+      &process_student($token, $client, $student);
+    }
   }
 
   $lineno++;
 }
+
+# Disconnect from the checksums database
+$dbh->disconnect;
 
 # Close data file
 close($data_fh) || &error_handler("Could not close $data_file: $!");
@@ -246,7 +260,10 @@ sub process_student {
 
   if ( $existing ) {
 
-    if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+    if ( $ILSWS::code != 200 ) {
+      &logger('error', $ILSWS::error);
+
+    } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
         return 1;
     }
@@ -265,7 +282,10 @@ sub process_student {
     # same email address then go on to the next search.
     if ( $existing ) {
       
-      if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+      if ( $ILSWS::code != 200 ) {
+        &logger('error', $ILSWS::error);
+
+      } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
         return 1;
       }
@@ -280,7 +300,10 @@ sub process_student {
 
   if ( $existing ) {
 
-    if ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+    if ( $ILSWS::code != 200 ) {
+      &logger('error', $ILSWS::error);
+
+    } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
       return 1;
     }
@@ -741,6 +764,8 @@ sub validate_dob {
   if ( length($value) > 10 ) {
     my @parts = split /\s/, $value;
     $date = $parts[0];
+  } else {
+    $date = $value;
   }
 
   if ( ($year, $mon, $day) = Decode_Date_US($date) ) {
@@ -836,5 +861,98 @@ sub validate_state {
 
   return AddressFormat::format_state($value);
 }
+
+###############################################################################
+# Create a digest (checksum) that can be used when checking if data has
+# changed 
+
+sub digest {
+  my $data = shift;
+  local $Data::Dumper::Sortkeys = 1;
+
+  return md5_hex(Dumper($data));
+}
+
+###############################################################################
+
+sub check_for_changes {
+  my $student = shift;
+  my $client = shift;
+  my $dbh = shift;
+
+  my $student_id = $client->{'id'} . $student->{'student_id'};
+
+  # Default is to assume that the data has changed
+  my $retval = 1;
+
+  # Create an MD5 digest from the incoming student data
+  my $checksum = &digest($student);
+
+  my $sql = qq|SELECT chksum FROM checksums WHERE student_id = '$student_id'|;
+  my $sth = $dbh->prepare($sql);
+  $sth->execute() or &error_handler("Could not search checksums: $dbh->errstr()");
+
+  my $result = $sth->fetchrow_hashref;
+
+  if ( defined $result->{'chksum'} ) {
+
+    # We found a checksum record so we can check to see if the new data has 
+    # changed
+    if ( $checksum eq $result->{'chksum'} ) {
+
+      # The checksums are the same, so the data has not changed
+      $retval = 0;
+
+      # Log to the CSV file
+      my $csv = get_logger('csv');
+      $csv->info(qq|"OK","Checksum",| . &print_line($student));
+
+    } else {
+
+      # The incoming data has changed, so update the checksum
+      $sql = qq|UPDATE checksums SET chksum = '$checksum' WHERE student_id = '$student_id'|;
+      $sth = $dbh->prepare($sql);
+      $sth->execute() or &error_handler("Could not update checksums: $dbh->errstr()");
+
+      &logger('debug', "Student data changed, updating checksum database");
+    }
+
+  } else {
+
+    # We did not find a checksum record for this student, so we should add one
+    $sql = qq|INSERT INTO checksums (student_id, chksum, date_added) VALUES ('$student_id', '$checksum', CURDATE())|;
+    $sth = $dbh->prepare($sql);
+    $sth->execute() or &error_handler("Could add record to checksums: $dbh->errstr()");
+
+    &logger('debug', "Successfully connected to checksum database");
+  }
+  $sth->finish();
+
+  return $retval;
+}
+
+###############################################################################
+# Connect to checksums database
+
+sub connect_database {
+
+  # Collect configuration data for database connection
+  my $hostname = $yaml->[0]->{'mysql'}->{'hostname'};
+  my $port     = $yaml->[0]->{'mysql'}->{'port'};
+  my $database = $yaml->[0]->{'mysql'}->{'db_name'};
+  my $username = $yaml->[0]->{'mysql'}->{'db_username'};
+  my $password = $yaml->[0]->{'mysql'}->{'db_password'};
+
+  # Connect to the checksums database
+  my $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
+  my $dbh = DBI->connect($dsn, $username, $password, { RaiseError => 0, AutoCommit => 1} ) 
+    or &error_handler("Unable to connect with $database database: $!");
+
+  &logger('info', "Successfully connected to $database database");
+
+  return $dbh;
+}
+
+###############################################################################
 
 ###############################################################################

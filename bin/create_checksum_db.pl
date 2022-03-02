@@ -63,7 +63,6 @@ $dbh = DBI->connect($dsn, $username, $password);
 $sql = qq|CREATE TABLE IF NOT EXISTS checksums (
     student_id INT PRIMARY KEY, 
     chksum char(32) NOT NULL, 
-    INDEX checksum (chksum),
     date_added DATE NOT NULL
     )|;
 $sth = $dbh->prepare($sql);

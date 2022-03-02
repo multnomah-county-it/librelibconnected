@@ -113,10 +113,7 @@ sub patron_search {
     'includeFields' => $include_fields
     );
 
-  # Create request object
-  my $data = &send_get("$base_URL/user/patron/search", $token, \%params);
-
-  return $data;
+  return &send_get("$base_URL/user/patron/search", $token, \%params);
 }
 
 ###############################################################################
@@ -224,7 +221,6 @@ sub send_get {
   my $data = '';
   if ( $res->is_success ) {
     $data = $json->decode($res->decoded_content);
-    #print $json->pretty->encode($data), "\n\n";
   } else {
     $error = $res->decoded_content;
   }
