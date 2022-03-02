@@ -2,3 +2,5 @@ config.yaml
 run/*
 log/*
 sample_data/*
+bin/stuck.txt
+bin/stuck_chk.pl
