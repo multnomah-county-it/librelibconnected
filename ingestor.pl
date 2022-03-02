@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# ReLibConnectEd Ingestor 2.0
+# ReLibConnectEd Ingestor
 #
 # This script is run by relibconnected.pl when an upload file is detected. It 
 # takes two required parameters, the absolute path to it's configuration file, 
