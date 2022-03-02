@@ -924,7 +924,7 @@ sub check_for_changes {
     $sth = $dbh->prepare($sql);
     $sth->execute() or &error_handler("Could add record to checksums: $dbh->errstr()");
 
-    &logger('debug', "Successfully connected to checksum database");
+    &logger('debug', "Inserted new record in checksum database");
   }
   $sth->finish();
 
@@ -948,7 +948,7 @@ sub connect_database {
   my $dbh = DBI->connect($dsn, $username, $password, { RaiseError => 0, AutoCommit => 1} ) 
     or &error_handler("Unable to connect with $database database: $!");
 
-  &logger('info', "Successfully connected to $database database");
+  &logger('info', "Login to $database database successful");
 
   return $dbh;
 }
