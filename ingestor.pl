@@ -34,9 +34,19 @@ use DBD::mysql;
 my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
 my @pps_schema      = qw(first_name middle_name last_name student_id address city state zipcode dob email);
 
+# Some globals for storing counts
+our $update_cnt = 0;
+our $create_cnt = 0;
+our $ambiguous_cnt = 0;
+
+our $checksum_cnt = 0;
+our $alt_id_cnt = 0;
+our $email_cnt = 0;
+our $id_cnt = 0;
+our $dob_street_cnt = 0;
+
 # Read configuration file passed to this script as the first parameter
-my $config_file = $ARGV[0];
-my $yaml = YAML::Tiny->read($config_file);
+our $yaml = YAML::Tiny->read($ARGV[0]);
 our $base_path = $yaml->[0]->{'base_path'};
 
 # Get the logging configuration from the log.conf file
@@ -192,6 +202,7 @@ while ( my $student = $parser->fetch ) {
     # Check the checksum database for changes to the data or for new data and 
     # process the student record only if necessary
     if ( &check_for_changes($student, $client, $dbh) ) {
+      $checksum_cnt++;
       &process_student($token, $client, $student);
     }
   }
@@ -207,6 +218,8 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 
 # Tell'em we're finished
 &logger('info', "Ingestor run on $data_file finished");
+&logger('info', "Statistics: $update_cnt updates, $create_cnt creates, $ambiguous_cnt ambiguous");
+&logger('info', "Matches: $checksum_cnt Checksum, $alt_id_cnt Alt ID, $id_cnt ID, $email_cnt Email, $dob_street_cnt DOB and Street");
 
 # Prepare email to the admin contact with the mail.log and ingester.csv files as
 # attachements
@@ -264,7 +277,9 @@ sub process_student {
       &logger('error', $ILSWS::error);
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+        $alt_id_cnt++;
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
+        $update_cnt++;
         return 1;
     }
 
@@ -286,7 +301,9 @@ sub process_student {
         &logger('error', $ILSWS::error);
 
       } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+        $email_cnt++;
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
+        $update_cnt++;
         return 1;
       }
 
@@ -304,7 +321,9 @@ sub process_student {
       &logger('error', $ILSWS::error);
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+      $id_cnt++;
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
+      $update_cnt++;
       return 1;
     }
 
@@ -320,7 +339,9 @@ sub process_student {
 
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
+      $dob_street_cnt++;
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
+      $update_cnt++;
     }
 
   } elsif ( $#{$existing} > 0 ) {
@@ -329,11 +350,13 @@ sub process_student {
     # and report the new student data in logs. This student
     &logger('debug', qq|"AMBIGUOUS:","DOB and Street",| . &print_line($student));
     $csv->info(qq|"Ambiguous","DOB and Street",| . &print_line($student));
+    $ambiguous_cnt++;
 
   } else {
 
     # All efforts to match this student failed, so create new record for them
     &create_student($token, $client, $student);
+    $create_cnt++;
   }
 
   return 1;
@@ -691,11 +714,18 @@ sub check_schema {
 sub print_line {
   my $student = shift;
 
-  my $string = '';
-  foreach my $key (@fields) {
-    $string .= qq|"$student->{$key}",|;
-  }
-  chop $string;
+  # Print out the student fields in a standard order, regardless
+  # of the order they were entered in the hash.
+  my $string = qq|"$student->{'student_id'}",|;
+  $string   .= qq|"$student->{'first_name'}",|;
+  $string   .= qq|"$student->{'middle_name'}",|;
+  $string   .= qq|"$student->{'last_name'}",|;
+  $string   .= qq|"$student->{'address'}",|;
+  $string   .= qq|"$student->{'city'}",|;
+  $string   .= qq|"$student->{'state'}",|;
+  $string   .= qq|"$student->{'zipcode'}",|;
+  $string   .= qq|"$student->{'dob'}",|;
+  $string   .= qq|"$student->{'email'}"|;
 
   return $string;
 }
