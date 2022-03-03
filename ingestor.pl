@@ -202,8 +202,9 @@ while ( my $student = $parser->fetch ) {
     # Check the checksum database for changes to the data or for new data and 
     # process the student record only if necessary
     if ( &check_for_changes($student, $client, $dbh) ) {
-      $checksum_cnt++;
       &process_student($token, $client, $student);
+    } else {
+      $checksum_cnt++;
     }
   }
 
