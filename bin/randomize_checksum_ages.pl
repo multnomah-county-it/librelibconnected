@@ -24,10 +24,32 @@ unless ( $hostname && $port && $database && $username && $password ) { die "Miss
 # Connect to the new database as the new user
 my $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
 my $dbh = DBI->connect($dsn, $username, $password);
- 
-my $sql = qq|DELETE FROM checksums WHERE date_added > CURDATE() + 90|;
+
+my $sql = qq|SELECT student_id FROM checksums|;
 my $sth = $dbh->prepare($sql);
-$sth->execute() or die "Could not delete from checksums";
+$sth->execute() or die "Could not select date_added";
+
+my $count = 0;
+while ( my $hashref = $sth->fetchrow_hashref ) {
+
+  # Get a random number between 0 and 7 
+  my $random = int(rand(7));
+  my $sql = '';
+
+  # Increase or decrease the date added by some number between 0 and 7
+  if ( $count % 2 ) {
+    $sql = qq|UPDATE checksums SET date_added = (DATE_ADD(date_added, INTERVAL $random day)) WHERE student_id = $hashref->{'student_id'}|;
+  } else {
+    $sql = qq|UPDATE checksums SET date_added = (DATE_ADD(date_added, INTERVAL -$random day)) WHERE student_id = $hashref->{'student_id'}|;
+  }
+  print "$sql\n";
+
+  my $sth = $dbh->prepare($sql);
+  $sth->execute() or die "Could not update checksums";
+  $sth->finish();
+
+  $count++;
+}
 
 # Finish up and disconnect
 $sth->finish();
