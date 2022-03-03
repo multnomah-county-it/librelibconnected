@@ -773,7 +773,7 @@ sub validate_student_id {
 
 sub validate_zipcode {
   my $value = shift;
-  my $retval = 0;
+  my $retval = '';
 
   if ( $value =~ /^\d{5}$/ || $value =~ /^\d{5}-\d{4}$/ ) {
     $retval = $value;
@@ -783,15 +783,16 @@ sub validate_zipcode {
 }
 
 ###############################################################################
-# Validates and reformats the date of birth
-# moment(record.dob, 'MM/DD/YYYY').format('YYYY-MM-DD')
+# Validates and reformats the date of birth. Accepts dates in two formats:
+# MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM
 
 sub validate_dob {
   my $value = shift;
+
   my $retval = '';
+  my $date = '';
   my ($year, $mon, $day);
 
-  my $date = '';
   if ( length($value) > 10 ) {
     my @parts = split /\s/, $value;
     $date = $parts[0];
@@ -830,7 +831,7 @@ sub validate_email {
 
 sub validate_first_name {
   my $value = shift;
-  my $retval = 0;
+  my $retval = '';
 
   if ( $value ) {
     $retval = substr($value, 0, 20);
@@ -857,7 +858,7 @@ sub validate_middle_name {
 
 sub validate_last_name {
   my $value = shift;
-  my $retval = 0;
+  my $retval = '';
 
   if ( $value ) {
     $retval = substr($value, 0, 60);
@@ -895,7 +896,8 @@ sub validate_state {
 
 ###############################################################################
 # Create a digest (checksum) that can be used when checking if data has
-# changed 
+# changed. Sort the keys so that they always appear in the same order, 
+# regardless of the order they were entered.
 
 sub digest {
   my $data = shift;
