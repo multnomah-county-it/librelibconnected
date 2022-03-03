@@ -19,7 +19,7 @@ my $username = $yaml->[0]->{'mysql'}->{'db_username'};
 my $password = $yaml->[0]->{'mysql'}->{'db_password'};
 my $max_checksum_age = $yaml->[0]->{'mysql'}->{'max_checksum_age'};
 
-unless ( $hostname && $port && $database && $username && $password ) { die "Missing element in configuration file\n" }
+unless ( $hostname && $port && $database && $username && $password ) { die "Missing element in configuration file" }
 
 # Connect to the new database as the new user
 my $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
@@ -27,7 +27,7 @@ my $dbh = DBI->connect($dsn, $username, $password);
  
 my $sql = qq|DELETE FROM checksums WHERE date_added > CURDATE() + 90|;
 my $sth = $dbh->prepare($sql);
-$sth->execute() or die "Could not delete from checksums: $dbh->errstr()";
+$sth->execute() or die "Could not delete from checksums";
 
 # Finish up and disconnect
 $sth->finish();
