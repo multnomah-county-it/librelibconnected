@@ -146,7 +146,7 @@ if ($client->{'schema'} eq 'district' ) {
 
 # Start the CVS file output with the column headers
 my $csv = get_logger('csv');
-$csv->info('"action","match","' . join('","', @fields) . '"');
+$csv->info('"action","match","' . join('","', @district_schema) . '"');
 
 # Connect to ILSWS. The working copy of the module ILSWS.pm is stored in 
 # /usr/local/lib/site_perl. The copy in the working directory is only for

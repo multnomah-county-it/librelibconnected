@@ -1,4 +1,5 @@
 config.yaml
+config.yaml.*
 run/*
 log/*
 sample_data/*
