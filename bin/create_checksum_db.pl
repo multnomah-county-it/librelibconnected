@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use utf8;
 
+# Check if we're running as root
+die "Must run as root" unless ( $> == 0 );
+
 use YAML::Tiny;
 use DBI;
 use DBD::mysql;
