@@ -132,7 +132,7 @@ srv
 5. Configure the SSHD service to only allow sftp connections for their user 
 who are members of the group `sftponly`, which was created by the 
 `create_new_user.pl` script. Add the following stanza to the bottom of 
-`/etc/ssh/sshd_config`:
+`/etc/ssh/sshd_config` and restart the SSH service:
 ```
 Match group sftponly
   ChrootDirectory /srv/libconnected
