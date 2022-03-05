@@ -82,28 +82,32 @@ relibconnected/
 └─ run
     └── ingestor.flag
 ```
+
 The `ingester.csv`, `mail.log`, and `ingester.flag` files are created during an 
 ingest and deleted automatically afterward. They are shown here for reference.
 
-2. Run `create_checksum_db.pl CONFIG_FILE MYSQL_ROOT_PASSWORD` to create the 
+2. Copy `config.yaml.sample` to `config.yaml` and edit the configuration as 
+needed. Be sure to complete this step before moving on to steps 3 and 4.
+
+3. Run `create_checksum_db.pl CONFIG_FILE MYSQL_ROOT_PASSWORD` to create the 
 MySQL database used for checksums. For example:
 ```
-./create_checksum_db.pl ../config.yaml 'thisismypassword'
+bin/create_checksum_db.pl config.yaml 'thisismypassword'
 ```
 
-3. Create `log` and `run` subdirectories (owned by the user that will run the 
-software.
+4. Run `create_new_user.pl CONFIG_FILE` to create the district user accounts
+and incoming directories. For example:
+```
+bin/create_new_user.pl config.yaml
+```
 
-4. Create a `relibconnected` subdirectory, accessible to the user that will run 
-the software, under `/var/log/`. You may want to add a `relibconnected` 
-configuration file under `/etc/logrotate.d/` to avoid uncontrolled log growth.
+This step will create the upload directory structure, usually 
+`/srv/libconnected`. Each school district will have its own directory 
+underneath, along with its own incoming subdirectory, into which data files may 
+be uploaded. The district accounts are configured so that their home directory 
+is the same as their directory under `/srv/libconnected`. 
 
-5. Create the upload directory structure, usually `/srv/libconnected`. Each 
-school district should have its own directory underneath, with its own incoming 
-directory, into which data files may be uploaded. The district accounts should
-be configured so that their home directory is their directory under 
-`/srv/libconnected`. Configure the SSHD service to only allow sftp connections 
-for their user. A sample directory structure might look like this:
+A sample directory structure might look like this:
 ```
 srv
 └── libconnected
@@ -124,25 +128,43 @@ srv
     └── rsd07
         └── incoming
 ```
-6. Copy `AddressFormat.pm` and `ILSWS.pm` to `/usr/local/lib/site_perl/`. Create 
+
+5. Configure the SSHD service to only allow sftp connections for their user 
+who are members of the group `sftponly`, which was created by the 
+`create_new_user.pl` script. Add the following stanza to the bottom of 
+`/etc/ssh/sshd_config`:
+```
+Match group sftponly
+  ChrootDirectory /srv/libconnected
+  X11Forwarding no
+  AllowTcpForwarding no
+  ForceCommand internal-sftp -u 0117
+```
+
+6. Create `log` and `run` subdirectories (owned by the user that will run the 
+software.
+
+7. Create a `relibconnected` subdirectory, accessible to the user that will run 
+the software, under `/var/log/`. You may want to add a `relibconnected` 
+configuration file under `/etc/logrotate.d/` to avoid uncontrolled log growth.
+
+8. Copy `AddressFormat.pm` and `ILSWS.pm` to `/usr/local/lib/site_perl/`. Create 
 the directory (as root) if it doesn't already exist. This will put the modules 
 into a path where Perl looks for modules. Recent versions of Perl do not, by 
 default, look in the current working directory.
 
-7. If you put the application somewhere other than `/opt/relibconnected`, edit 
+9. If you put the application somewhere other than `/opt/relibconnected`, edit 
 the paths at the top of `relibconnected.pl` to match the application directory.
 
-8. Copy `config.yaml.sample` to `config.yaml`.
-
-9. Edit `config.yaml` as required. Make sure the `base_path` is set to the same
+10. Edit `config.yaml` as required. Make sure the `base_path` is set to the same
 directory as entered in the variable at the top of `relibconnected.pl`. 
 
-10. I don't recommend changing the names or locations of the log files as they 
+11. I don't recommend changing the names or locations of the log files as they 
 are defined in `log.conf` unless you change the application `base_path`. If you 
 do edit the names or paths to the log files in `log.conf`, you must also change 
 them in `ingestor.pl`.
 
-11. Create two cron jobs for the user which owns the application directory. The
+12. Create two cron jobs for the user which owns the application directory. The
 first runs relibconnected every 5 minutes to check for uploaded data files. The
 second removes expired checksum records from the mysql database based on the
 `max_checksum_age` set in `config.yaml`.
@@ -150,4 +172,14 @@ For example:
 ```
 */5 * * * * /opt/relibconnected/relibconnected.pl
 15 2 * * * /opt/relibconnected/bin/remove_old_checksums.pl /opt/relibconnected/config.yaml
+```
+
+13. One other utility script is included in the bin directory. Run it with the
+syntax, `randomize_checksum_ages.pl CONFIG_FILE`. Use this script to spread out the expiration
+dates of checksum records so that the software doesn't attempt to update all
+the records from a given original load on the same date. The script will 
+randomly adjust the `date_added` field in each record forward or backward by up
+to seven days. For example:
+```
+bin/randomize_checksum_ages.pl config.yaml
 ```
