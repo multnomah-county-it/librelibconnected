@@ -555,10 +555,10 @@ sub create_data_structure {
   my $mode = '';
 
   if ( $key && $key =~ /^\d+$/ ) {
-    $mode = 'new_defaults';
+    $mode = 'overlay_defaults';
     $new_student{'key'} = $key;
   } else {
-    $mode = 'overlay_defaults';
+    $mode = 'new_defaults';
   }
 
   my ($year, $mon, $day) = split /-/, $student->{'dob'};
