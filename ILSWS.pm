@@ -173,6 +173,16 @@ sub patron_update {
 }
 
 ###############################################################################
+# Update the patron lastActivityDate
+
+sub activity_update {
+  my $token = shift;
+  my $json = shift;
+
+  return &send_post("$base_URL/user/patron/updateActivityDate", $token, $json, 'POST');
+}
+
+###############################################################################
 # Create a standard GET request object. Used by most searches.
 
 sub send_get {
