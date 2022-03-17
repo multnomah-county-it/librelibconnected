@@ -63,12 +63,12 @@ our $log = get_logger('log');
 # Set the log level: $INFO, $WARN, $ERROR, $DEBUG, $FATAL
 # based on the log level in config.yaml
 switch( $yaml->[0]->{'log_level'} ) {
-  case 'info' { $log->level($INFO) }
-  case 'warn' { $log->level($WARN) }
+  case 'info'  { $log->level($INFO) }
+  case 'warn'  { $log->level($WARN) }
   case 'error' { $log->level($ERROR) }
   case 'debug' { $log->level($DEBUG) }
   case 'fatal' { $log->level($FATAL) }
-  else        { $log->level($DEBUG) }
+  else         { $log->level($DEBUG) }
 }
 
 # Validate email from address before starting.
