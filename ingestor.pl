@@ -19,7 +19,6 @@ use YAML::Tiny;
 use Parse::CSV;
 use Date::Calc qw(check_date Today leap_year Delta_Days Decode_Date_US);
 use AddressFormat;
-use ILSWS;
 use Email::Mailer;
 use Switch;
 use Data::Dumper qw(Dumper);
@@ -29,6 +28,15 @@ use Try::Tiny;
 use Digest::MD5 qw(md5_hex);
 use DBI;
 use DBD::mysql;
+
+our $yaml;
+BEGIN {
+  $yaml = YAML::Tiny->read($ARGV[0]);
+  $ENV{'ILSWS_BASE_PATH'} = $yaml->[0]->{'base_path'};
+}
+
+# Do this after the BEGIN so that ILSWS gets the base path from the environment
+use ILSWS;
 
 # Valid fields in uploaded CSV files
 my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
@@ -46,7 +54,6 @@ our $id_cnt = 0;
 our $dob_street_cnt = 0;
 
 # Read configuration file passed to this script as the first parameter
-our $yaml = YAML::Tiny->read($ARGV[0]);
 our $base_path = $yaml->[0]->{'base_path'};
 
 # Get the logging configuration from the log.conf file
@@ -153,7 +160,7 @@ $csv->info('"action","match","' . join('","', @district_schema) . '"');
 # reference.
 my $token = ILSWS::ILSWS_connect;
 if ( $token ) {
-  &logger('info', "Login to ILSWS successful");
+  &logger('info', "Login to ILSWS $yaml->[0]->{'ilsws'}->{'webapp'} successful");
 } else {
   &error_handler("Login to ILSWS failed: $ILSWS::error");
 }
