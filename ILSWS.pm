@@ -32,8 +32,7 @@ our @PATRON_INCLUDE_FIELDS = (
   'barcode',
   'category01',
   'category02',
-  'category07',
-  'customInformation'
+  'category07'
 );
 
 # Define global variables
