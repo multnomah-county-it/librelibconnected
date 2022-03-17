@@ -66,7 +66,8 @@ sub ILSWS_connect {
   my $ua = LWP::UserAgent->new(
     timeout => $timeout,
     ssl_opts => { verify_hostname => 1 },
-    protocols_allowed => ['https']
+    protocols_allowed => ['https'],
+    protocals_forbidden => ['http']
     );
   
   # Post the request
@@ -217,8 +218,8 @@ sub send_get {
     timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
-    protocals_forbidden => ['http'],
-  );
+    protocals_forbidden => ['http']
+    );
 
   my $res = $ua->request($req);
 
