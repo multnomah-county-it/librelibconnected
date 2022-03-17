@@ -45,7 +45,7 @@ our $code = 0;
 
 # Read configuration file
 our $yaml = YAML::Tiny->read("$base_path/config.yaml");
-our $base_URL = qq(https://$yaml->[0]->{ilsws}->{hostname}:$yaml->[0]->{ilsws}->{port}/$yaml->[0]->{ilsws}->{webapp});
+our $base_URL = qq(https://$yaml->[0]->{'ilsws'}->{'hostname'}:$yaml->[0]->{'ilsws'}->{'port'}/$yaml->[0]->{'ilsws'}->{'webapp'});
 
 ###############################################################################
 # Subroutines
@@ -59,7 +59,7 @@ sub ILSWS_connect {
 
   # Define the URL for ILSWS
   my $action = 'rest/security/loginUser';
-  my $params = "clientID=$yaml->[0]->{ilsws}->{client_id}&login=$yaml->[0]->{ilsws}->{username}&password=$yaml->[0]->{ilsws}->{password}";
+  my $params = "clientID=$yaml->[0]->{'ilsws'}->{'client_id'}&login=$yaml->[0]->{'ilsws'}->{'username'}&password=$yaml->[0]->{'ilsws'}->{'password'}";
   my $URL = "$base_URL/$action?$params";
 
   # Create user agent object
