@@ -30,6 +30,9 @@ my $rm = '/usr/bin/rm';
 # Do not edit below this point
 ###############################################################################
 
+# Change to the $base_path so that ILSWS.pm gets the correct working dir.
+chdir $base_path;
+
 # Check if a flag file exists, indicating that an ingest is already in progress.
 if ( -e $flag_file ) {
 

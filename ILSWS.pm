@@ -13,6 +13,7 @@ use XML::Hash::LX;
 use YAML::Tiny;
 use URI::Encode;
 use JSON;
+use Cwd;
 
 # Define global constants
 our $DEFAULT_TIMEOUT = 20;
@@ -36,7 +37,9 @@ our @PATRON_INCLUDE_FIELDS = (
 );
 
 # Define global variables
-our $base_path = '/opt/relibconnected';
+our $base_path = getcwd;
+$base_path = $ENV{'ILSWS_BASE_PATH'} if $ENV{'ILSWS_BASE_PATH'};
+
 our $error = '';
 our $code = 0;
 
@@ -206,13 +209,13 @@ sub send_get {
   my $req = HTTP::Request->new('GET', $URL);
   $req->header( 'Content-Type' => 'application/json' );
   $req->header( 'Accept' => 'application/json' );
-  $req->header( 'SD-Originating-App-Id' => 'libconnected' );
-  $req->header( 'x-sirs-clientID' => $yaml->[0]->{ilsws}->{client_id} );
+  $req->header( 'SD-Originating-App-Id' => $yaml->[0]->{'ilsws'}->{'app_id'} );
+  $req->header( 'x-sirs-clientID' => $yaml->[0]->{'ilsws'}->{'client_id'} );
   $req->header( 'x-sirs-sessionToken' => $token );
 
   # Define the user agent instance
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{ilsws}->{timeout},
+    timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
     protocals_forbidden => ['http'],
@@ -255,10 +258,10 @@ sub send_post {
   my $req = HTTP::Request->new($query_type, $URL);
   $req->header( 'Content-Type' => 'application/json' );
   $req->header( 'Accept' => 'application/json' );
-  $req->header( 'SD-Originating-App-Id' => 'libconnected' );
+  $req->header( 'SD-Originating-App-Id' => $yaml->[0]->{'ilsws'}->{'app_id'} );
   $req->header( 'SD-Preferred-Role' => 'STAFF' );
-  $req->header( 'SD-Prompt-Return' => "USER_PRIVILEGE_OVRCD/$yaml->[0]->{ilsws}->{user_privilege_override}" );
-  $req->header( 'x-sirs-clientID' => $yaml->[0]->{ilsws}->{client_id} );
+  $req->header( 'SD-Prompt-Return' => "USER_PRIVILEGE_OVRCD/$yaml->[0]->{'ilsws'}->{'user_privilege_override'}" );
+  $req->header( 'x-sirs-clientID' => $yaml->[0]->{'ilsws'}->{'client_id'} );
   $req->header( 'x-sirs-sessionToken' => $token );
   $req->content( $query_json );
 
@@ -266,7 +269,7 @@ sub send_post {
 
   # Define the user agent instance
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{ilsws}->{timeout},
+    timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
     protocals_forbidden => ['http'],

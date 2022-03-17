@@ -23,6 +23,7 @@ ilsws:
   hostname: HOSTNAME
   port: 443
   webapp: APPLICATION
+  app_id: relibconnected
   client_id: CLIENT_ID
   user_privilege_override: OVERRIDE
   timeout: 20
