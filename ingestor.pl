@@ -277,7 +277,8 @@ sub process_student {
   my $student = shift;
 
   # Check for existing patron with same student ID in the ALT_ID field
-  my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", 1);
+  my %options = ( count => 1 );
+  my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", \%options);
 
   if ( $existing ) {
 
@@ -298,7 +299,8 @@ sub process_student {
   # Search for the student via email address
   if ( $student->{'email'} ne 'null' ) {
 
-    $existing = ILSWS::patron_search($token, 'EMAIL', $student->{'email'}, 2);
+    %options = ( count => 2 );
+    $existing = ILSWS::patron_search($token, 'EMAIL', $student->{'email'}, \%options);
 
     # If there is only one record with this student ID, overlay the record and
     # return from the subroutine. If there is more than one person using the 
@@ -321,7 +323,8 @@ sub process_student {
   }
 
   # Check for existing patron with same student ID in the ID field (barcode)
-  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}", 1);
+  %options = ( count => 1 );
+  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}", \%options);
 
   if ( $existing ) {
 
@@ -382,7 +385,8 @@ sub search {
   my $csv = get_logger('csv');
 
   my ($year, $mon, $day) = split /-/, $student->{'dob'};
-  my $bydob = ILSWS::patron_search($token, 'BIRTHDATE', "${year}${mon}${day}", 1000);
+  my %options = ( count => 1000 );
+  my $bydob = ILSWS::patron_search($token, 'BIRTHDATE', "${year}${mon}${day}", \%options);
 
   if ( $bydob->{'totalResults'} >= 1 ) {
 
@@ -392,7 +396,7 @@ sub search {
     # Remove punctuation from address before searching
     my $street = $student->{'address'};
     $street =~ s/#//g;
-    my $bystreet = ILSWS::patron_search($token, 'STREET', $street, 1000);
+    my $bystreet = ILSWS::patron_search($token, 'STREET', $street, \%options);
 
     if ( $bystreet->{'totalResults'} >= 1 ) {
 

@@ -17,7 +17,9 @@ use Cwd;
 
 # Define global constants
 our $DEFAULT_TIMEOUT = 20;
+our $DEFAULT_PATRON_SEARCH_ROW = 1;
 our $DEFAULT_PATRON_SEARCH_COUNT = 1000;
+our $DEFAULT_PATRON_SEARCH_BOOLEAN = 'AND';
 
 our @PATRON_INCLUDE_FIELDS = (
   'profile',
@@ -32,7 +34,9 @@ our @PATRON_INCLUDE_FIELDS = (
   'barcode',
   'category01',
   'category02',
-  'category07'
+  'category07',
+  'category11',
+  'lastActivityDate'
 );
 
 # Define global variables
@@ -99,11 +103,17 @@ sub ILSWS_connect {
 sub patron_search {
   my $token = shift;
   my $index = shift;
-  my $value = shift; 
-  my $count = shift;
- 
+  my $value = shift;
+  my $options = shift;
+
   # Number of results to return
-  $count = defined $count ? $count : $DEFAULT_PATRON_SEARCH_COUNT;
+  $options->{'ct'} = $DEFAULT_PATRON_SEARCH_COUNT unless $options->{'ct'};
+
+  # Row to start on (so you can page through results)
+  $options->{'rw'} = $DEFAULT_PATRON_SEARCH_ROW unless $options->{'rw'};
+
+  # Boolean AND or OR to use with multiple search terms
+  $options->{'j'} = $DEFAULT_PATRON_SEARCH_BOOLEAN unless $options->{'j'};
 
   # Fields to return in result
   my $include_fields = join(',', @PATRON_INCLUDE_FIELDS);
@@ -111,8 +121,9 @@ sub patron_search {
   # Define query parameters JSON
   my %params = (
     'q' => "$index:$value",
-    'rw' => 1,
-    'ct' => $count,
+    'rw' => $options->{'rw'},
+    'ct' => $options->{'ct'},
+    'j' => $options->{'j'},
     'includeFields' => $include_fields
     );
 
@@ -197,7 +208,7 @@ sub send_get {
   if ( $params ) {
     my $encoder = URI::Encode->new();
     $URL .= "?";
-    foreach my $key ('q','rw','ct','includeFields') {
+    foreach my $key ('q','rw','ct','j','includeFields') {
       if ( $params->{$key} ) {
         $URL .= "$key=" . $encoder->encode($params->{$key}) . '&';
       }
