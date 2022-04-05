@@ -94,6 +94,7 @@ sub format_street {
   $value =~ s/ Rd Loop(?=\s|$)/ Road Loop/i;
   $value =~ s/ St Loop(?=\s|$)/ Street Loop/i;
   $value =~ s/ St Dr(?=\s|$)/ Street Dr/i;
+  $value =~ s/ St Ct(?=\s|$)/ Street Ct/i;
   $value =~ s/ Ter Ave(?=\s|$)/ Terrace Ave/i;
   $value =~ s/ Ter Ct(?=\s|$)/ Terrace Ct/i;
   $value =~ s/ Ter Dr(?=\s|$)/ Terrace Dr/i;
@@ -102,20 +103,20 @@ sub format_street {
   $value =~ s/ Par 4th Dr$/ Par 4 Dr/i;
 
   # Fix numbered street names
-  $value =~ s/(11\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/11th $2/i;
-  $value =~ s/(12\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/12th $2/i;
-  $value =~ s/(13\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/13th $2/i;
+  $value =~ s/(11\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/11th $2/i;
+  $value =~ s/(12\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/12th $2/i;
+  $value =~ s/(13\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/13th $2/i;
 
-  $value =~ s/(0\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/0th $2/i;
-  $value =~ s/(1\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/1st $2/i;
-  $value =~ s/(2\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/2nd $2/i;
-  $value =~ s/(3\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/3rd $2/i;
-  $value =~ s/(4\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/4th $2/i;
-  $value =~ s/(5\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/5th $2/i;
-  $value =~ s/(6\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/6th $2/i;
-  $value =~ s/(7\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/7th $2/i;
-  $value =~ s/(8\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/8th $2/i;
-  $value =~ s/(9\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Hwy|Pkwy)(?=\s|$)/9th $2/i;
+  $value =~ s/(0\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/0th $2/i;
+  $value =~ s/(1\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/1st $2/i;
+  $value =~ s/(2\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/2nd $2/i;
+  $value =~ s/(3\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/3rd $2/i;
+  $value =~ s/(4\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/4th $2/i;
+  $value =~ s/(5\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/5th $2/i;
+  $value =~ s/(6\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/6th $2/i;
+  $value =~ s/(7\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/7th $2/i;
+  $value =~ s/(8\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/8th $2/i;
+  $value =~ s/(9\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/9th $2/i;
 
   # Oddments
   $value =~ s/<lf>/<LF>/gi;
