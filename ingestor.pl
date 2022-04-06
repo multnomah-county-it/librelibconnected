@@ -489,6 +489,7 @@ sub create_student {
       &logger('error', "Failed to create $client->{'id'}$student->{'student_id'} (line $lineno) on attempt $retries: " . &print_line($student));
       &logger('error', "$ILSWS::code: $ILSWS::error");
     }
+    sleep($retries);
     $retries++;
   }
 
@@ -541,6 +542,7 @@ sub update_student {
       &logger('error', "Failed to update $client->{'id'}$student->{'student_id'} (line $lineno) on attempt $retries: " . &print_line($student));
       &logger('error', "$ILSWS::code: $ILSWS::error");
     }
+    sleep($retries);
     $retries++;
   }
 
