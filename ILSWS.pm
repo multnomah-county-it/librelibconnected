@@ -25,6 +25,7 @@ our @PATRON_INCLUDE_FIELDS = (
   'profile',
   'birthDate',
   'library',
+  'lastActivityDate',
   'alternateID',
   'firstName',
   'middleName',
@@ -40,11 +41,12 @@ our @PATRON_INCLUDE_FIELDS = (
 );
 
 # Define global variables
-our $base_path = getcwd;
-$base_path = $ENV{'ILSWS_BASE_PATH'} if $ENV{'ILSWS_BASE_PATH'};
-
 our $error = '';
 our $code = 0;
+
+# Get the $base_path where the config.yaml will be located
+our $base_path = getcwd;
+$base_path = $ENV{'ILSWS_BASE_PATH'} if $ENV{'ILSWS_BASE_PATH'};
 
 # Read configuration file
 our $yaml = YAML::Tiny->read("$base_path/config.yaml");
@@ -70,8 +72,8 @@ sub ILSWS_connect {
   my $ua = LWP::UserAgent->new(
     timeout => $timeout,
     ssl_opts => { verify_hostname => 1 },
-    protocols_allowed => ['https'],
-    protocals_forbidden => ['http']
+    protocals_forbidden => ['http'],
+    protocols_allowed => ['https']
     );
   
   # Post the request
@@ -95,6 +97,28 @@ sub ILSWS_connect {
   }
 
   return $token;
+}
+
+###############################################################################
+# Authenticate a patron via ID (Barcode) and pin
+
+sub patron_authenticate {
+  my $token = shift;
+  my $id = shift;
+  my $pin = shift;
+
+  my $json = qq|{ "barcode": "$id", "password": "$pin" }|;
+
+  return &send_post("$base_URL/user/patron/authenticate", $token, $json, 'POST');
+}
+
+###############################################################################
+# Describe the patron resource
+
+sub patron_describe {
+  my $token = shift;
+  
+  return &send_get("$base_URL/user/patron/describe", $token);
 }
 
 ###############################################################################
@@ -214,24 +238,34 @@ sub send_get {
       }
     }
     chop $URL;
+    $URL =~ s/(.*)\#(.*)/$1%23$2/;
   }
+
+  # Set $error to the URL being submitted so that it can be accessed
+  # in debug mode
+  $error = $URL;
+
+  # Define a random request tracker
+  my $req_num = 1 + int rand(1000000000);
 
   # Define the request headers
   my $req = HTTP::Request->new('GET', $URL);
   $req->header( 'Content-Type' => 'application/json' );
   $req->header( 'Accept' => 'application/json' );
   $req->header( 'SD-Originating-App-Id' => $yaml->[0]->{'ilsws'}->{'app_id'} );
+  $req->header( 'SD-Request-Tracker' => $req_num );
   $req->header( 'x-sirs-clientID' => $yaml->[0]->{'ilsws'}->{'client_id'} );
   $req->header( 'x-sirs-sessionToken' => $token );
 
   # Define the user agent instance
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
+    timeout => $yaml->[0]->{ilsws}->{timeout},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
-    protocals_forbidden => ['http']
-    );
+    protocals_forbidden => ['http'],
+  );
 
+  # Submit the request
   my $res = $ua->request($req);
 
   # Set the response code so other functions can check it as needed
@@ -265,27 +299,30 @@ sub send_post {
     $query_type = 'POST';
   }
 
+  # Define a random request tracker
+  my $req_num = 1 + int rand(1000000000);
+
   # Define the request headers
   my $req = HTTP::Request->new($query_type, $URL);
   $req->header( 'Content-Type' => 'application/json' );
   $req->header( 'Accept' => 'application/json' );
   $req->header( 'SD-Originating-App-Id' => $yaml->[0]->{'ilsws'}->{'app_id'} );
+  $req->header( 'SD-Response-Tracker' => $req_num );
   $req->header( 'SD-Preferred-Role' => 'STAFF' );
-  $req->header( 'SD-Prompt-Return' => "USER_PRIVILEGE_OVRCD/$yaml->[0]->{'ilsws'}->{'user_privilege_override'}" );
-  $req->header( 'x-sirs-clientID' => $yaml->[0]->{'ilsws'}->{'client_id'} );
+  $req->header( 'SD-Prompt-Return' => "USER_PRIVILEGE_OVRCD/$yaml->[0]->{ilsws}->{user_privilege_override}" );
+  $req->header( 'x-sirs-clientID' => $yaml->[0]->{ilsws}->{client_id} );
   $req->header( 'x-sirs-sessionToken' => $token );
   $req->content( $query_json );
 
-  # print $req->as_string;
-
   # Define the user agent instance
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
+    timeout => $yaml->[0]->{ilsws}->{timeout},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
     protocals_forbidden => ['http'],
   );
 
+  # Submit the request
   my $res = $ua->request($req);
 
   # Prepare to deal with JSON
