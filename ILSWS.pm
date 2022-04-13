@@ -259,7 +259,7 @@ sub send_get {
 
   # Define the user agent instance
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{ilsws}->{timeout},
+    timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
     protocals_forbidden => ['http'],
@@ -309,14 +309,14 @@ sub send_post {
   $req->header( 'SD-Originating-App-Id' => $yaml->[0]->{'ilsws'}->{'app_id'} );
   $req->header( 'SD-Response-Tracker' => $req_num );
   $req->header( 'SD-Preferred-Role' => 'STAFF' );
-  $req->header( 'SD-Prompt-Return' => "USER_PRIVILEGE_OVRCD/$yaml->[0]->{ilsws}->{user_privilege_override}" );
-  $req->header( 'x-sirs-clientID' => $yaml->[0]->{ilsws}->{client_id} );
+  $req->header( 'SD-Prompt-Return' => "USER_PRIVILEGE_OVRCD/$yaml->[0]->{'ilsws'}->{'user_privilege_override'}" );
+  $req->header( 'x-sirs-clientID' => $yaml->[0]->{'ilsws'}->{'client_id'} );
   $req->header( 'x-sirs-sessionToken' => $token );
   $req->content( $query_json );
 
   # Define the user agent instance
   my $ua = LWP::UserAgent->new(
-    timeout => $yaml->[0]->{ilsws}->{timeout},
+    timeout => $yaml->[0]->{'ilsws'}->{'timeout'},
     ssl_opts => { verify_hostname => 1 },
     protocols_allowed => ['https'],
     protocals_forbidden => ['http'],
