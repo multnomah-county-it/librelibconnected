@@ -101,6 +101,7 @@ sub format_street {
   $value =~ s/ Ter Trails(?=\s|$)/ Terrace Trails/i;
   $value =~ s/ Ter View(?=\s|$)/ Terrace View/i;
   $value =~ s/ Par 4th Dr$/ Par 4 Dr/i;
+  $value =~ s/ Pkwy Ct$/ Parkway Ct/i;
 
   # Fix numbered street names
   $value =~ s/(11\s)(St|Ave|Rd|Ln|Blvd|Ct|Pl|Dr|Pkwy)(?=\s|$)/11th $2/i;
