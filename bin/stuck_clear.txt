@@ -1,0 +1,3 @@
+Log files more than one day old were found in the LibConnectEd log directory and moved to /opt/relibconnected.
+
+LibConnectEd Support
