@@ -10,7 +10,7 @@
 # user, every five minutes or so.
 #
 use strict;
-use File::Find;
+use File::Find qw(find);
 
 # File paths. Edit if you move this application or the path to search for
 # data files to ingest.
@@ -54,9 +54,7 @@ sub wanted {
         system("$touch $flag_file") == 0
           || die "ERROR: Could not create flag file: $flag_file";
 
-        # Run the ingestor script. We do not pass the file found as a parameter
-        # because the $ingestor will do it's own check for upload files and
-        # potentially load more than one.
+        # Run the ingestor script. 
         system("$ingestor $config_file $File::Find::dir/$_") == 0
           || die "ERROR: $ingestor failed";
 

@@ -277,7 +277,7 @@ sub process_student {
   my $student = shift;
 
   # Check for existing patron with same student ID in the ALT_ID field
-  my %options = ( count => 1 );
+  my %options = ( ct => 1, includeFields => 'barcode' );
   my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", \%options);
 
   if ( $existing ) {
@@ -287,6 +287,7 @@ sub process_student {
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $alt_id_cnt++;
+        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
         $update_cnt++;
         return 1;
@@ -299,7 +300,7 @@ sub process_student {
   # Search for the student via email address
   if ( $student->{'email'} ne 'null' ) {
 
-    %options = ( count => 2 );
+    %options = ( ct => 2, includeFields => 'barcode' );
     $existing = ILSWS::patron_search($token, 'EMAIL', $student->{'email'}, \%options);
 
     # If there is only one record with this student ID, overlay the record and
@@ -312,6 +313,7 @@ sub process_student {
 
       } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $email_cnt++;
+        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
         $update_cnt++;
         return 1;
@@ -323,7 +325,7 @@ sub process_student {
   }
 
   # Check for existing patron with same student ID in the ID field (barcode)
-  %options = ( count => 1 );
+  %options = ( ct => 1, includeFields => 'barcode' );
   $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}", \%options);
 
   if ( $existing ) {
@@ -332,7 +334,10 @@ sub process_student {
       &logger('error', $ILSWS::error);
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
+
+      # $student
       $id_cnt++;
+      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
       $update_cnt++;
       return 1;
@@ -351,6 +356,7 @@ sub process_student {
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
       $dob_street_cnt++;
+      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
       $update_cnt++;
     }
@@ -385,7 +391,7 @@ sub search {
   my $csv = get_logger('csv');
 
   my ($year, $mon, $day) = split /-/, $student->{'dob'};
-  my %options = ( count => 1000 );
+  my %options = ( ct => 1000, includeFields => 'barcode,firstName,middleName,lastName' );
   my $bydob = ILSWS::patron_search($token, 'BIRTHDATE', "${year}${mon}${day}", \%options);
 
   if ( $bydob->{'totalResults'} >= 1 ) {
@@ -577,14 +583,25 @@ sub create_data_structure {
   my ($year, $mon, $day) = split /-/, $student->{'dob'};
 
   $new_student{'resource'} = '/user/patron';
-  $new_student{'fields'}{'barcode'} = "$client->{'id'}$student->{'student_id'}";
+
+  if ( $student->{'barcode'} =~ /^\d{14}$/ ) {
+    $new_student{'fields'}{'barcode'} = "$student->{'barcode'}";
+    $new_student{'fields'}{'alternateID'} = "$client->{'id'}$student->{'student_id'}";
+  } else {
+    $new_student{'fields'}{'barcode'} = "$client->{'id'}$student->{'student_id'}";
+    $new_student{'fields'}{'alternateID'} = "$client->{'id'}$student->{'student_id'}";
+  }
+
   $new_student{'fields'}{'firstName'} = $student->{'first_name'};
   if ( $student->{'middle_name'} ne 'null' ) {
     $new_student{'fields'}{'middleName'} = $student->{'middle_name'};
   }
   $new_student{'fields'}{'lastName'} = $student->{'last_name'};
   $new_student{'fields'}{'birthDate'} = $student->{'dob'};
-  $new_student{'fields'}{'pin'} = "${mon}${day}${year}";
+
+  if ( $mode eq 'new_defaults' ) {
+    $new_student{'fields'}{'pin'} = "${mon}${day}${year}";
+  }
 
   $new_student{'fields'}{'category01'}{'resource'} = '/policy/patronCategory01';
   $new_student{'fields'}{'category01'}{'key'} = $client->{$mode}->{'user_categories'}->{'1'};

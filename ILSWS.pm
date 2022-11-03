@@ -36,8 +36,7 @@ our @PATRON_INCLUDE_FIELDS = (
   'category01',
   'category02',
   'category07',
-  'category11',
-  'lastActivityDate'
+  'category11'
 );
 
 # Define global variables
@@ -140,7 +139,7 @@ sub patron_search {
   $options->{'j'} = $DEFAULT_PATRON_SEARCH_BOOLEAN unless $options->{'j'};
 
   # Fields to return in result
-  my $include_fields = join(',', @PATRON_INCLUDE_FIELDS);
+  $options->{'includeFields'} = join(',', @PATRON_INCLUDE_FIELDS) unless $options->{'includeFields'};
 
   # Define query parameters JSON
   my %params = (
@@ -148,7 +147,7 @@ sub patron_search {
     'rw' => $options->{'rw'},
     'ct' => $options->{'ct'},
     'j' => $options->{'j'},
-    'includeFields' => $include_fields
+    'includeFields' => $options->{'includeFields'}
     );
 
   return &send_get("$base_URL/user/patron/search", $token, \%params);
@@ -160,9 +159,9 @@ sub patron_search {
 sub patron_alt_id_search {
   my $token = shift;
   my $value = shift;
-  my $count = shift;
+  my $options = shift;
 
-  return &patron_search($token, 'ALT_ID', $value, $count);
+  return &patron_search($token, 'ALT_ID', $value, $options);
 }
 
 ###############################################################################
@@ -171,9 +170,9 @@ sub patron_alt_id_search {
 sub patron_barcode_search {
   my $token = shift;
   my $value = shift; 
-  my $count = shift;
+  my $options = shift;
  
-  return &patron_search($token, 'ID', $value, $count);
+  return &patron_search($token, 'ID', $value, $options);
 }
 
 ###############################################################################
