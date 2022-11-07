@@ -588,7 +588,7 @@ sub create_data_structure {
 
   $new_student{'resource'} = '/user/patron';
 
-  if ( $student->{'barcode'} =~ /^\d{14}$/ ) {
+  if ( $student->{'barcode'} && $student->{'barcode'} =~ /^\d{14}$/ ) {
     $new_student{'fields'}{'barcode'} = "$student->{'barcode'}";
     $new_student{'fields'}{'alternateID'} = "$client->{'id'}$student->{'student_id'}";
   } else {
