@@ -287,7 +287,8 @@ sub process_student {
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $alt_id_cnt++;
-        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
+          if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
         $update_cnt++;
         return 1;
@@ -313,7 +314,8 @@ sub process_student {
 
       } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $email_cnt++;
-        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
+          if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
         $update_cnt++;
         return 1;
@@ -337,7 +339,8 @@ sub process_student {
 
       # $student
       $id_cnt++;
-      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
+        if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
       $update_cnt++;
       return 1;
@@ -356,7 +359,8 @@ sub process_student {
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
       $dob_street_cnt++;
-      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
+        if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
       $update_cnt++;
     }
