@@ -359,8 +359,8 @@ sub process_student {
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
       $dob_street_cnt++;
-      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
-        if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
+      $student->{'barcode'} = $existing->[0]->{'fields'}->{'barcode'}
+        if defined($existing->[0]->{'fields'}->{'barcode'});
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
       $update_cnt++;
     }
@@ -450,11 +450,14 @@ sub compare_results {
   my $set2 = shift;
 
   my @results = ();
+  my $count = 0;
 
   foreach my $i (@{$set1}) {
     foreach my $x (@{$set2}) {
       if ( $i->{'key'} eq $x->{'key'} ) {
-        push @results, $i;
+        $results[$count]{'key'} = $i->{'key'};
+        $results[$count]{'fields'}{'barcode'} = $i->{'fields'}->{'barcode'};
+        $count++;
       }
     }
   }
