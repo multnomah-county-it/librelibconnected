@@ -33,7 +33,7 @@ my $count = 0;
 while ( my $hashref = $sth->fetchrow_hashref ) {
 
   # Get a random number between 0 and 7 
-  my $random = int(rand(7));
+  my $random = int(rand(30));
   my $sql = '';
 
   # Increase or decrease the date added by some number between 0 and 7
