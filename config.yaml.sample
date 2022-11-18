@@ -35,6 +35,7 @@ clients:
     schema: district
     name: multcolib.org
     contact: Some User <some.user@domain>
+    email_reports: true
     new_defaults:
       home_library: MID
       user_profile: 0_MULT
