@@ -76,17 +76,6 @@ if ( &validate_email($yaml->[0]->{'smtp'}->{'from'}) eq 'null' ) {
   &error_handler("Invalid from address in configuration: $yaml->[0]->{'smtp'}->{'from'}");
 }
 
-# Validate admin contact email addresses
-my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
-my @valid_addresses = ();
-foreach my $i (0 .. $#addresses) {
-  if ( &validate_email($addresses[$i]) ne 'null' ) {
-    push @valid_addresses, $addresses[$i];
-  } else {
-    &error_handler("Invalid email address in configuration: $addresses[$i]");
-  }
-}
-
 # CSV file where we'll log updates and creates. Must match CSVFILE defined in
 # log.conf!
 my $csv_file = "$base_path/log/ingestor.csv";
@@ -228,6 +217,25 @@ close($data_fh) || &error_handler("Could not close $data_file: $!");
 &logger('info', "Ingestor run on $data_file finished");
 &logger('info', "Statistics: $update_cnt updates, $create_cnt creates, $ambiguous_cnt ambiguous");
 &logger('info', "Matches: $checksum_cnt Checksum, $alt_id_cnt Alt ID, $id_cnt ID, $email_cnt Email, $dob_street_cnt DOB and Street");
+
+# Validate admin contact email addresses
+my @addresses = split /,\s*/, $yaml->[0]->{'admin_contact'};
+my @valid_addresses = ();
+
+if ( $client->{'email_reports'} eq 'true' ) {
+  my @contacts = split /,\s*/, $client->{'contact'};
+  if ( @contacts ) {
+    push @addresses, @contacts;
+  }
+}
+
+foreach my $i (0 .. $#addresses) {
+  if ( &validate_email($addresses[$i]) ne 'null' ) {
+    push @valid_addresses, $addresses[$i];
+  } else {
+    &error_handler("Invalid email address in configuration: $addresses[$i]");
+  }
+}
 
 # Prepare email to the admin contact with the mail.log and ingester.csv files as
 # attachements
