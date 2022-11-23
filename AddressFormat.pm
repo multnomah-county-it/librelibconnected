@@ -164,6 +164,7 @@ sub format_city {
   $value =~ s/Milton-Freewater/Milton-Freewater/i;
   $value =~ s/Gresha/Gresham/i;
   $value =~ s/Greshamm/Gresham/i;
+  $value =~ s/Lakeoswego/Lake Oswego/i;
   $value =~ s/Lake Oswego/Lake Oswego/i;
   $value =~ s/St Helen(s{0,1})/Saint Helens/i;
   $value =~ s/Hillsburo/Hillsboro/i;
