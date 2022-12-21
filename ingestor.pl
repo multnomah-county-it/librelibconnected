@@ -413,7 +413,7 @@ sub search {
   my %options = ( ct => 1000, includeFields => 'barcode,firstName,middleName,lastName' );
   my $bydob = ILSWS::patron_search($token, 'BIRTHDATE', "${year}${mon}${day}", \%options);
 
-  if ( $bydob->{'totalResults'} >= 1 ) {
+  if ( $bydob && $bydob->{'totalResults'} >= 1 ) {
 
     # If we found a person or persons with student's DOB, then we continue
     # by searching via street.
@@ -614,24 +614,23 @@ sub create_data_structure {
     $new_student{'fields'}{'alternateID'} = "$client->{'id'}$student->{'student_id'}";
   }
 
-  $new_student{'fields'}{'firstName'} = $student->{'first_name'};
-  if ( $student->{'middle_name'} ne 'null' ) {
-    $new_student{'fields'}{'middleName'} = $student->{'middle_name'};
-  }
-  $new_student{'fields'}{'lastName'} = $student->{'last_name'};
   $new_student{'fields'}{'birthDate'} = $student->{'dob'};
 
   if ( $mode eq 'new_defaults' ) {
+    $new_student{'fields'}{'firstName'} = $student->{'first_name'};
+    if ( $student->{'middle_name'} ne 'null' ) {
+      $new_student{'fields'}{'middleName'} = $student->{'middle_name'};
+    }
+    $new_student{'fields'}{'lastName'} = $student->{'last_name'};
+
     $new_student{'fields'}{'pin'} = "${mon}${day}${year}";
+
+    $new_student{'fields'}{'category02'}{'resource'} = '/policy/patronCategory02';
+    $new_student{'fields'}{'category02'}{'key'} = $client->{'new_defaults'}->{'user_categories'}->{'2'};
   }
 
   $new_student{'fields'}{'category01'}{'resource'} = '/policy/patronCategory01';
   $new_student{'fields'}{'category01'}{'key'} = $client->{$mode}->{'user_categories'}->{'1'};
-
-  if ( $mode eq 'new_defaults' ) {
-    $new_student{'fields'}{'category02'}{'resource'} = '/policy/patronCategory02';
-    $new_student{'fields'}{'category02'}{'key'} = $client->{'new_defaults'}->{'user_categories'}->{'2'};
-  }
 
   $new_student{'fields'}{'category03'}{'resource'} = '/policy/patronCategory03';
   $new_student{'fields'}{'category03'}{'key'} = $client->{$mode}->{'user_categories'}->{'3'};
