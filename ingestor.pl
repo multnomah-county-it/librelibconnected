@@ -168,11 +168,6 @@ while ( my $student = $parser->fetch ) {
   my $errors = 0;
   foreach my $key (keys %{$student}) {
 
-    # For testing
-    if ( $student->{'student_id'} == 737059 ) {
-      $token = 0;
-    }
-
     # If the student has no address (a private address), then set the address
     # to the ISOM Building.
     if ( ! $student->{'address'} && ! $student->{'city'} && ! $student->{'zipcode'} ) {
