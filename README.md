@@ -53,9 +53,9 @@ sudo cpan install MODULE_NAME
 - LWP::UserAgent
 - Parse::CSV
 - Switch
-- XML::Hash::LX
+- XML::Simple
 - Unicode::Normalize
-- URI::Encode
+- URI
 - YAML::Tiny
 
 # Installation Notes
