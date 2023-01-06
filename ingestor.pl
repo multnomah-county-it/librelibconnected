@@ -37,7 +37,7 @@ BEGIN {
 }
 
 # Do this after the BEGIN so that ILSWS gets the base path from the environment
-use ILSWS;
+use ILSWS qw(/opt/relibconnected);
 
 # Valid fields in uploaded CSV files
 my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);

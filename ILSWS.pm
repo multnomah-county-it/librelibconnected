@@ -6,16 +6,22 @@ my $LEVEL = 1;
 use strict;
 use warnings;
 
+use Exporter;
+our @ISA= qw( Exporter );
+our @EXPORT_OK = qw(ILSWS_connect patron_authenticate patron_describe patron_search patron_alt_id_search patron_barcode_search patron_create patron_update activity_update send_get send_post);
+our @EXPORT = qw(import);
+
 # Modules required
 use LWP::UserAgent;
 use HTTP::Request;
-use XML::Hash::LX;
+use XML::Simple qw(:strict);
 use YAML::Tiny;
-use URI::Encode;
+use URI;
 use JSON;
 use Cwd;
 
 # Define global constants
+our $BASE_PATH;
 our $DEFAULT_TIMEOUT = 20;
 our $DEFAULT_PATRON_SEARCH_ROW = 1;
 our $DEFAULT_PATRON_SEARCH_COUNT = 1000;
@@ -42,19 +48,30 @@ our @PATRON_INCLUDE_FIELDS = (
 # Define global variables
 our $error = '';
 our $code = 0;
-
-# Get the $base_path where the config.yaml will be located
-our $base_path = getcwd;
-$base_path = $ENV{'ILSWS_BASE_PATH'} if $ENV{'ILSWS_BASE_PATH'};
-
-# Read configuration file
-our $yaml = YAML::Tiny->read("$base_path/config.yaml");
-our $base_URL = qq(https://$yaml->[0]->{'ilsws'}->{'hostname'}:$yaml->[0]->{'ilsws'}->{'port'}/$yaml->[0]->{'ilsws'}->{'webapp'});
+our $yaml = '';
+our $base_URL = '';
 
 ###############################################################################
 # Subroutines
 ###############################################################################
-#
+# Get the base_path from a parameter
+
+sub import {
+	my ($package, $path) = @_;
+  $BASE_PATH = $path;
+  
+  if ( ! $BASE_PATH ) {  
+    $BASE_PATH = $ENV{'ILSWS_BASE_PATH'} if $ENV{'ILSWS_BASE_PATH'};
+	}
+	if ( ! $BASE_PATH ) {
+		$BASE_PATH = getcwd;
+	}
+	
+	# Read configuration file
+	$yaml = YAML::Tiny->read("$BASE_PATH/config.yaml");
+	$base_URL = qq(https://$yaml->[0]->{'ilsws'}->{'hostname'}:$yaml->[0]->{'ilsws'}->{'port'}/$yaml->[0]->{'ilsws'}->{'webapp'});
+}
+ 
 ###############################################################################
 # Routine for establishing a connection with ILSWS and logging in. Returns a
 # token which is used in subsequent queries.
@@ -82,11 +99,11 @@ sub ILSWS_connect {
   if ( $res->is_success ) {
 
     # Load response XML into hash
-    my $res_hash = xml2hash $res->decoded_content;
+    my $res_hash = XMLin($res->decoded_content, ForceArray => 1, KeyAttr => 'LoginUserResponse');
 
     # Check if we got a token
-    if ( defined $res_hash->{'LoginUserResponse'}->{'sessionToken'} ) {
-      $token = $res_hash->{'LoginUserResponse'}->{'sessionToken'};
+    if ( defined $res_hash->{'sessionToken'} ) {
+      $token = $res_hash->{'sessionToken'};
     } else {
       $error = $res->decoded_content;
     }
@@ -229,11 +246,11 @@ sub send_get {
 
   # Encode the query parameters, as they will be sent in the URL
   if ( $params ) {
-    my $encoder = URI::Encode->new();
+    # my $encoder = URI::Encode->new();
     $URL .= "?";
     foreach my $key ('q','rw','ct','j','includeFields') {
       if ( $params->{$key} ) {
-        $URL .= "$key=" . $encoder->encode($params->{$key}) . '&';
+        $URL .= "$key=" . URI->new($params->{$key}, 'HTTP') . '&';
       }
     }
     chop $URL;
@@ -344,4 +361,3 @@ sub send_post {
 
 ###############################################################################
 1;
-
