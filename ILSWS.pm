@@ -57,19 +57,19 @@ our $base_URL = '';
 # Get the base_path from a parameter
 
 sub import {
-	my ($package, $path) = @_;
+  my ($package, $path) = @_;
   $BASE_PATH = $path;
   
   if ( ! $BASE_PATH ) {  
     $BASE_PATH = $ENV{'ILSWS_BASE_PATH'} if $ENV{'ILSWS_BASE_PATH'};
-	}
-	if ( ! $BASE_PATH ) {
-		$BASE_PATH = getcwd;
-	}
-	
-	# Read configuration file
-	$yaml = YAML::Tiny->read("$BASE_PATH/config.yaml");
-	$base_URL = qq(https://$yaml->[0]->{'ilsws'}->{'hostname'}:$yaml->[0]->{'ilsws'}->{'port'}/$yaml->[0]->{'ilsws'}->{'webapp'});
+  }
+  if ( ! $BASE_PATH ) {
+    $BASE_PATH = getcwd;
+  }
+  
+  # Read configuration file
+  $yaml = YAML::Tiny->read("$BASE_PATH/config.yaml");
+  $base_URL = qq(https://$yaml->[0]->{'ilsws'}->{'hostname'}:$yaml->[0]->{'ilsws'}->{'port'}/$yaml->[0]->{'ilsws'}->{'webapp'});
 }
  
 ###############################################################################
