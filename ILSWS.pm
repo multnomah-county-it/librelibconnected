@@ -8,7 +8,7 @@ use warnings;
 
 use Exporter;
 our @ISA= qw( Exporter );
-our @EXPORT_OK = qw(ILSWS_connect patron_authenticate patron_describe patron_search patron_alt_id_search patron_barcode_search patron_create patron_update activity_update send_get send_post);
+our @EXPORT_OK = qw(ILSWS_connect patron_authenticate patron_describe patron_search patron_alt_id_search patron_barcode_search patron_create patron_update patron_update_activeid activity_update send_get send_post);
 our @EXPORT = qw(import);
 
 # Modules required
@@ -227,6 +227,89 @@ sub patron_update {
 }
 
 ###############################################################################
+# Update existing patron extended information, activeid
+
+sub patron_update_activeid {
+  my $token = shift;
+  my $key = shift;
+  my $patron_id = shift;
+  my $option = shift;
+
+  my $retval = 0;
+
+  $error = "Invalid option: $option" unless $option =~ /^(a|i|d)$/;
+
+  my $include_fields = 'customInformation{*}';
+  my $res = &send_get("$base_URL/user/patron/key/$key?includeFields=customInformation{*}", $token);
+
+  my $custom;
+  if ( $res ) {
+    if ( $option eq 'a' ) {
+
+      if ( exists($res->{'fields'}{'customInformation'}) ) {
+        $custom = $res->{'fields'}{'customInformation'};
+        for ( my $i = 0; $i <= $#{$custom}; $i++ ) {
+          if ( $custom->[$i]{'fields'}{'code'}{'key'} eq 'ACTIVEID' ) {
+            my @values = split /,/, $custom->[$i]{'fields'}{'data'};
+            push @values, $patron_id;
+            $custom->[$i]{'fields'}{'data'} = join ',', @values;
+          }
+        }
+      }
+
+    } elsif ( $option eq 'i' ) {
+
+      if ( exists($res->{'fields'}{'customInformation'}) ) {
+        $custom = $res->{'fields'}{'customInformation'};
+        for ( my $i = 0; $i <= $#{$custom}; $i++ ) {
+          if ( $custom->[$i]{'fields'}{'code'}{'key'} eq 'INACTVID' ) {
+            my @values = split /,/, $custom->[$i]{'fields'}{'data'};
+            push @values, $patron_id;
+            $custom->[$i]{'fields'}{'data'} = join ',', @values;
+          }
+        }
+      }
+
+    } else {
+
+      if ( exists($res->{'fields'}{'customInformation'}) ) {
+        $custom = $res->{'fields'}{'customInformation'};
+        for ( my $i = 0; $i <= $#{$custom}; $i++ ) {
+          if ( $custom->[$i]{'fields'}{'code'}{'key'} =~ /^(ACTIVEID|INACTVID|PREV_ID|PREV_ID2|STUDENT_ID)$/ ) {
+            my @values = split /,/, $custom->[$i]{'fields'}{'data'};
+            my @new_values = ();
+            foreach my $value (@values) {
+              if ( $value != $patron_id ) {
+                push @new_values, $value;
+              }
+            }
+            $custom->[$i]{'fields'}{'data'} = join ',', @new_values;
+          }
+        }
+      }
+    }
+
+    my %patron = ();
+    $patron{'resource'} = '/user/patron';
+    $patron{'key'} = $key;
+    $patron{'fields'}{'customInformation'} = $custom;
+
+    # Encode the %patron data structure as JSON
+    my $json = JSON->new->allow_nonref;
+    my $json_str = $json->encode(\%patron);
+
+    # Update the patron
+    my $res = &patron_update($token, $json_str, $key);
+
+    if ( $res ) {
+      $retval = 1;
+    }
+  }  
+
+  return $retval;
+}
+
+###############################################################################
 # Update the patron lastActivityDate
 
 sub activity_update {
@@ -361,3 +444,4 @@ sub send_post {
 
 ###############################################################################
 1;
+
