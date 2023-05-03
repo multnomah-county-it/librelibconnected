@@ -37,7 +37,7 @@ BEGIN {
 }
 
 # Do this after the BEGIN so that ILSWS gets the base path from the environment
-use ILSWS qw(/opt/relibconnected);
+use ILSWS $yaml->[0]->{'base_path'};
 
 # Valid fields in uploaded CSV files
 my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
@@ -627,6 +627,9 @@ sub create_data_structure {
 
     $new_student{'fields'}{'category02'}{'resource'} = '/policy/patronCategory02';
     $new_student{'fields'}{'category02'}{'key'} = $client->{'new_defaults'}->{'user_categories'}->{'2'};
+
+    $new_student{'fields'}{'library'}{'resource'} = '/policy/library';
+    $new_student{'fields'}{'library'}{'key'} = $client->{'new_defaults'}->{'home_library'};
   }
 
   $new_student{'fields'}{'category01'}{'resource'} = '/policy/patronCategory01';
@@ -644,9 +647,6 @@ sub create_data_structure {
   } else {
     $new_student{'fields'}{'profile'}{'key'} = $client->{$mode}->{'youth_profile'};
   }
-
-  $new_student{'fields'}{'library'}{'resource'} = '/policy/library';
-  $new_student{'fields'}{'library'}{'key'} = $client->{$mode}->{'home_library'};
 
   my %street = ();
   $street{'resource'} = '/user/patron/address1';
@@ -667,7 +667,7 @@ sub create_data_structure {
   $zip{'fields'}{'data'} = $student->{'zipcode'};
 
   my %email = ();
-  if ( $student->{'email'} ne 'null' ) {
+  if ( $mode eq 'new_defaults' && $student->{'email'} ne 'null' ) {
     $email{'resource'} = '/user/patron/address1';
     $email{'fields'}{'code'}{'key'} = 'EMAIL';
     $email{'fields'}{'code'}{'resource'} = '/policy/patronAddress1';

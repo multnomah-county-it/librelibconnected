@@ -15,7 +15,7 @@ use File::Find qw(find);
 # File paths. Edit if you move this application or the path to search for
 # data files to ingest.
 my $srv_path  = '/srv/libconnected';
-my $base_path = '/opt/relibconnected';
+my $base_path = '/opt/librelibconnected';
 
 # Don't change these unless you need to.
 my $config_file = "$base_path/config.yaml";
