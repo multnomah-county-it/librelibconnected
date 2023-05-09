@@ -20,6 +20,7 @@ use YAML::Tiny;
 use Parse::CSV;
 use Date::Calc qw(check_date Today leap_year Delta_Days Decode_Date_US);
 use AddressFormat;
+use DataHandler qw(validate validate_date);
 use Email::Mailer;
 use Switch;
 use Data::Dumper qw(Dumper);
@@ -176,15 +177,18 @@ while ( my $student = $parser->fetch ) {
       $student->{'zipcode'} = '97212';
     }
 
-    # Validate and reformat data in each field, as necessary
-    my $validate = &validate_field($key, $student->{$key});
+    # Validate data in each field as configured in config.yaml
+    my $value = &validate_field($key, $student->{$key}, $client);
+
+    # Transform each field as configured in config.yaml
+    $value = &transform_field($key, $student->{$key}, $client, $student);
 
     # Log any errors, except with email, because that field is not required.
-    if ( ! $validate ) {
+    if ( ! $value ) {
       &logger('error', "Invalid data in line $lineno, $key: " . $student->{$key});
       $errors++;
     } else {
-      $student->{$key} = $validate;
+      $student->{$key} = $value;
     }
   }
 
@@ -783,7 +787,6 @@ sub print_line {
 }
 
 ###############################################################################
-#
 # Checks if there is a function to validate a particular field. If there is
 # one, it runs it, passing in the value, which may be returned unchanged, 
 # returned reformatted, or returned as null (in which case an error should 
@@ -792,31 +795,51 @@ sub print_line {
 sub validate_field {
   my $field_name = shift;
   my $value = shift;
+  my $client = shift;
+  my $rule = $client->{'fields'}->{$field_name}->{'validation'};
 
-  my $sub = "validate_$field_name";
+  if ( substr($rule, 0, 1) eq 'c' ) {
 
-  if ( exists &{$sub} ) {
-    my $subroutine = \&{$sub};
+    my $sub = substr($rule, 1);
+    if ( exists &{$sub} ) {
+      my $subroutine = \&{$sub};
 
-    # Run the function to check the value
-    $value = $subroutine->($value);
+      # Run the function to check the value
+      $value = $subroutine->($value);
+    }
+
+  } else {
+
+    if ( ! validate($value, $rule) ) {
+        $value = NULL;
+    }
   }
 
   return $value;
 }
 
 ###############################################################################
-# Validates student_id as a number
+# Transforms field
 
-sub validate_student_id {
+sub transform_field {
+  my $field_name = shift;
   my $value = shift;
-  my $retval = 0;
+  my $client = shift;
+  my $student = shift;
+  my $rule = $client->{'fields'}->{$field_name}->{'transform'};
 
-  if ( $value =~ /^\d{6}$/ ) {
-    $retval = $value;
+  if ( substr($rule, 0, 1) eq 'c' ) {
+
+    my $sub = substr($rule, 1);
+    if ( exists &{$sub} ) {
+      my $subroutine = \&{$sub};
+
+      # Run the function to check the value
+      $value = $subroutine->($value, $student);
+    }
   }
 
-  return $retval;
+  return $value;
 }
 
 ###############################################################################
@@ -834,10 +857,10 @@ sub validate_zipcode {
 }
 
 ###############################################################################
-# Validates and reformats the date of birth. Accepts dates in two formats:
+# Reformats the date of birth. Accepts dates in two formats:
 # MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM
 
-sub validate_dob {
+sub transform_dob {
   my $value = shift;
 
   my $retval = '';
@@ -878,50 +901,9 @@ sub validate_email {
 }
 
 ###############################################################################
-# Required first_name, max 20 characters
-
-sub validate_first_name {
-  my $value = shift;
-  my $retval = '';
-
-  if ( $value ) {
-    $retval = substr($value, 0, 20);
-  }
-
-  return $retval;
-}
-
-###############################################################################
-# Not required middle_name, max 20 characters. Return null if not supplied.
-
-sub validate_middle_name {
-  my $value = shift;
-
-  if ( ! $value ) {
-    $value = 'null';
-  }
-
-  return substr($value, 0, 20);
-}
-
-###############################################################################
-# Required last_name, max 60 characters
-
-sub validate_last_name {
-  my $value = shift;
-  my $retval = '';
-
-  if ( $value ) {
-    $retval = substr($value, 0, 60);
-  }
-
-  return $retval;
-}
-
-###############################################################################
 # Use the AddressFormat.pm function to validate and reformat to USPS standards
 
-sub validate_address {
+sub tranform_address {
   my $value = shift;
 
   return AddressFormat::format_street($value);
@@ -930,7 +912,7 @@ sub validate_address {
 ###############################################################################
 # Use the AddressFormat.pm function to validate and reformat to USPS standard
 
-sub validate_city {
+sub tranform_city {
   my $value = shift;
 
   return AddressFormat::format_city($value);
@@ -939,7 +921,7 @@ sub validate_city {
 ###############################################################################
 # Use the AddressFormatpm function to validate and reformat to USPS standard
 
-sub validate_state {
+sub transform_state {
   my $value = shift;
 
   return AddressFormat::format_state($value);
