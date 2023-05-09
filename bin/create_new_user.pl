@@ -19,7 +19,7 @@ die "Must run as root" unless ( $> == 0 );
 use YAML::Tiny;
 
 # Make sure we have an sftponly group
-eval { system("groupadd sftponly"); };
+eval { system("groupadd -f sftponly"); };
 
 my $yaml = YAML::Tiny->read($ARGV[0]);
 
