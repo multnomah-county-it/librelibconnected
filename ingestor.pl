@@ -41,8 +41,8 @@ BEGIN {
 use ILSWS $yaml->[0]->{'base_path'};
 
 # Valid fields in uploaded CSV files
-my @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
-my @pps_schema      = qw(first_name middle_name last_name student_id address city state zipcode dob email);
+our @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
+our @pps_schema      = qw(first_name middle_name last_name student_id address city state zipcode dob email);
 
 # Some globals for storing counts
 our $update_cnt = 0;
@@ -306,8 +306,7 @@ sub process_student {
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $alt_id_cnt++;
-        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
-          if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
+        $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
         $update_cnt++;
         return 1;
@@ -333,8 +332,7 @@ sub process_student {
 
       } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $email_cnt++;
-        $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
-          if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
+        $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
         $update_cnt++;
         return 1;
@@ -358,8 +356,7 @@ sub process_student {
 
       # $student
       $id_cnt++;
-      $student->{'barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'}
-        if defined($existing->{'result'}->[0]->{'fields'}->{'barcode'});
+      $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
       $update_cnt++;
       return 1;
@@ -378,8 +375,7 @@ sub process_student {
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
       $dob_street_cnt++;
-      $student->{'barcode'} = $existing->[0]->{'fields'}->{'barcode'}
-        if defined($existing->[0]->{'fields'}->{'barcode'});
+      $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
       $update_cnt++;
     }
@@ -536,6 +532,17 @@ sub create_student {
 }
 
 ###############################################################################
+# Check if value in array
+
+sub in_array {
+    my ($arr, $search_for) = @_;
+    foreach my $value (@$arr) {
+        return 1 if $value eq $search_for;
+    }
+    return 0;
+}
+
+###############################################################################
 # Update existing student
 
 sub update_student {
@@ -595,62 +602,70 @@ sub update_student {
 sub create_data_structure {
   my $student = shift;
   my $key = shift;
+  my $mode = $key =~ /^\d+$/ ? 'overlay' : 'new';
+
+  # Hash to associate resources with field names. Only needed for resources 
+  # and categories, not strings
+  my %resources = (
+    'category01'  => 'patronCategory01',
+    'category02'  => 'patronCategory02',
+    'category03'  => 'patronCategory03',
+    'category04'  => 'patronCategory04',
+    'category05'  => 'patronCategory05',
+    'category06'  => 'patronCategory06',
+    'category07'  => 'patronCategory07',
+    'category08'  => 'patronCategory08',
+    'category09'  => 'patronCategory09',
+    'category10'  => 'patronCategory10',
+    'category11'  => 'patronCategory11',
+    'category12'  => 'patronCategory12',
+    'library'     => 'library',
+    'profile'     => 'userProfile',
+    );
 
   my %new_student = ();
-  my $mode = '';
-
-  if ( $key && $key =~ /^\d+$/ ) {
-    $mode = 'overlay_defaults';
-    $new_student{'key'} = $key;
-  } else {
-    $mode = 'new_defaults';
-  }
-
-  my ($year, $mon, $day) = split /-/, $student->{'dob'};
-
   $new_student{'resource'} = '/user/patron';
 
-  if ( $student->{'barcode'} && $student->{'barcode'} =~ /^\d{14}$/ ) {
-    $new_student{'fields'}{'barcode'} = "$student->{'barcode'}";
-    $new_student{'fields'}{'alternateID'} = "$client->{'id'}$student->{'student_id'}";
-  } else {
-    $new_student{'fields'}{'barcode'} = "$client->{'id'}$student->{'student_id'}";
-    $new_student{'fields'}{'alternateID'} = "$client->{'id'}$student->{'student_id'}";
+  if ( $mode eq 'n' ) {
+    $new_student{'key'} = $key;
   }
 
-  $new_student{'fields'}{'birthDate'} = $student->{'dob'};
+  foreach my $field (keys $client->{'fields'}) {
 
-  if ( $mode eq 'new_defaults' ) {
-    $new_student{'fields'}{'firstName'} = $student->{'first_name'};
-    if ( $student->{'middle_name'} ne 'null' ) {
-      $new_student{'fields'}{'middleName'} = $student->{'middle_name'};
+    # Execute defaults, validations and transformations for fields not in the schema
+    if ( ! in_array(\@district_schema, $field) ) {
+
+      # Set defaults based on mode
+      if ( $client->{$field}->{$mode . '_default'} ) {
+        $student->{$field} = $client->{$field}->{$mode . '_default'} unless $student->{$field};
+      }
+      $student->{$field} = $client->{$field}->{$mode . '_value'} if $client->{$field}->{$mode . '_value'};
+        
+      # Validate
+      $student->{$field} = &validate_field($field, $student->{$field}, $client, $student);
+
+      # Transform
+      $student->{$field} = &transform_field($field, $student->{$field}, $client, $student);
     }
-    $new_student{'fields'}{'lastName'} = $student->{'last_name'};
 
-    $new_student{'fields'}{'pin'} = "${mon}${day}${year}";
-
-    $new_student{'fields'}{'category02'}{'resource'} = '/policy/patronCategory02';
-    $new_student{'fields'}{'category02'}{'key'} = $client->{'new_defaults'}->{'user_categories'}->{'2'};
-
-    $new_student{'fields'}{'library'}{'resource'} = '/policy/library';
-    $new_student{'fields'}{'library'}{'key'} = $client->{'new_defaults'}->{'home_library'};
-  }
-
-  $new_student{'fields'}{'category01'}{'resource'} = '/policy/patronCategory01';
-  $new_student{'fields'}{'category01'}{'key'} = $client->{$mode}->{'user_categories'}->{'1'};
-
-  $new_student{'fields'}{'category03'}{'resource'} = '/policy/patronCategory03';
-  $new_student{'fields'}{'category03'}{'key'} = $client->{$mode}->{'user_categories'}->{'3'};
-
-  $new_student{'fields'}{'category07'}{'resource'} = '/policy/patronCategory07';
-  $new_student{'fields'}{'category07'}{'key'} = $client->{$mode}->{'user_categories'}->{'7'};
-
-  $new_student{'fields'}{'profile'}{'resource'} = '/policy/userProfile';
-  if ( &over_thirteen($student->{'dob'}) ) {
-    $new_student{'fields'}{'profile'}{'key'} = $client->{$mode}->{'user_profile'};
-  } else {
-    $new_student{'fields'}{'profile'}{'key'} = $client->{$mode}->{'youth_profile'};
-  }
+    switch ( $client->{$field}->{'type'} ) {
+        case 'string' {
+            if ( $mode eq 'new' || $client->{$field}->{'overlay'} eq 'true' ) {
+                $new_student{'fields'}{$field} = $student->{$field};
+            }
+        }
+        case 'resource' {
+            if ( $mode eq 'new' || $client->{$field}->{'overlay'} eq 'true' } {
+                $new_student{'fields'}{$field}{'resource'} = "/policy/$resource{$field}";
+                $new_student{'fields'}{$field}{'key'} = $student->{$field};
+            }
+        case 'category' {
+            if ( $mode eq 'new' || $client->{$field}->{'overlay'} eq 'true' } {
+                $new_student{'fields'}{$field}{'resource'} = '/policy/$resource{$field}';
+            }
+        default {
+        }
+    }
 
   my %street = ();
   $street{'resource'} = '/user/patron/address1';
@@ -690,25 +705,6 @@ sub create_data_structure {
 ###############################################################################
 # Calculate if age over thirteen from birthday.
 
-sub over_thirteen {
-  my $dob = shift;
-  my $retval = 0;
-
-  my ($year1, $month1, $day1) = split /-/, $dob;
-  my ($year2, $month2, $day2) = Today();
-
-  if (($day1 == 29) && ($month1 == 2) && !leap_year($year2))
-    { $day1--; }
-
-  if ( (($year2 - $year1) >  12) 
-    || ( (($year2 - $year1) == 12) 
-    && (Delta_Days($year2,$month1,$day1, $year2,$month2,$day2) >= 0) ) ) {
-
-    $retval = 1;
-  } 
-
-  return $retval;
-}
 
 ###############################################################################
 # Log errors and exit
@@ -788,9 +784,9 @@ sub print_line {
 
 ###############################################################################
 # Checks if there is a function to validate a particular field. If there is
-# one, it runs it, passing in the value, which may be returned unchanged, 
-# returned reformatted, or returned as null (in which case an error should 
-# be returned by the calling code, if appropriate.)
+# one, it runs it, passing in the value, while will either be returned if it is
+# valid or returned as null if it is not (in which case an error may be 
+# returned by the calling code.
 
 sub validate_field {
   my $field_name = shift;
@@ -811,7 +807,7 @@ sub validate_field {
   } else {
 
     if ( ! validate($value, $rule) ) {
-        $value = NULL;
+        $value = '';
     }
   }
 
@@ -837,6 +833,22 @@ sub transform_field {
       # Run the function to check the value
       $value = $subroutine->($value, $student);
     }
+  }
+
+  return $value;
+}
+
+###############################################################################
+# Transform barcode
+
+sub transform_barcode {
+  my $value = shift;
+  my $student = shift;
+
+  if ( $student->{'existing_id'} =~ /^\d{14}$/ ) {
+    $student->{'alternate_id'} = $value;
+    $value = $student->{'existing_id'};
+    delete($student->{'existing_id'};
   }
 
   return $value;
@@ -892,18 +904,54 @@ sub validate_email {
   my $value = shift;
 
   if ( $value ) {
-    $value = Email::Valid->address($value) ? $value : 'null';
+    $value = Email::Valid->address($value) ? $value : '';
   } else {
-    $value = 'null';
+    $value = '';
   }
 
   return $value;
 }
 
 ###############################################################################
+# Creates default pin from DOB
+
+sub transform_pin {
+    my $value = shift;
+    my $student = shift;
+
+    my ($year, $mon, $day) = split /\-/, $student->{'dob'};
+
+    return "${mon}${day}${year}";
+}
+
+###############################################################################
+# Selects profile based on age
+
+sub transform_profile {
+    my $value = shift;
+    my $student = shift;
+    my $dob = $student->{'dob'};
+
+    my ($year1, $month1, $day1) = split /-/, $dob;
+    my ($year2, $month2, $day2) = Today();
+
+    if (($day1 == 29) && ($month1 == 2) && !leap_year($year2))
+        { $day1--; }
+
+    if ( (($year2 - $year1) >  17) 
+        || ( (($year2 - $year1) == 17) 
+        && (Delta_Days($year2,$month1,$day1, $year2,$month2,$day2) >= 0) ) ) {
+
+        $value = $yaml->[0]->{'adult_profile'};
+    } 
+
+    return $value;
+}
+
+###############################################################################
 # Use the AddressFormat.pm function to validate and reformat to USPS standards
 
-sub tranform_address {
+sub transform_address {
   my $value = shift;
 
   return AddressFormat::format_street($value);
@@ -912,7 +960,7 @@ sub tranform_address {
 ###############################################################################
 # Use the AddressFormat.pm function to validate and reformat to USPS standard
 
-sub tranform_city {
+sub transform_city {
   my $value = shift;
 
   return AddressFormat::format_city($value);

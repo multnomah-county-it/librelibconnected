@@ -141,12 +141,13 @@ sub evaluate_map {
 #	Date4                      => 'd:MM/DD/YYYY',
 #	Timestamp1                 => 'd:YYYY/MM/DD HH:MM',
 #	Timestamp2                 => 'd:YYYY-MM-DD HH:MM',
-#       Timestamp3                 => 'd:YYYYMMDDHHMMSS',
+#   Timestamp3                 => 'd:YYYYMMDDHHMMSS',
 #	Customer_Reference         => 'i:8',                # int(8)
 #	Invoice_Memo               => 's:256',              # string(256)
 #	Posting                    => 'v:01|11',            # list('01', '11')
 #	Customer_PO_Number         => 'b',                  # must be blank
 #	Extended_Amount            => 'n:3.2',              # number(000.00)
+#   Range                      => 'r:100000,999999',    # integer between x and y
 #	);
 #
 # Returns 0 or 1
