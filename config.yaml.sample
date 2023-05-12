@@ -1,54 +1,665 @@
+#################################################################################
+# Sample fields hash with validation rules:
+#
+# %fields = (
+#       Date1                      => 'd:YYYY-MM-DD',
+#       Date2                      => 'd:YYYY/MM/DD',
+#       Date3                      => 'd:MM-DD-YYYY',
+#       Date4                      => 'd:MM/DD/YYYY',
+#       Timestamp1                 => 'd:YYYY/MM/DD HH:MM',
+#       Timestamp2                 => 'd:YYYY-MM-DD HH:MM',
+#       Timestamp3                 => 'd:YYYYMMDDHHMMSS',
+#       Customer_Reference         => 'i:8',                # int(8)
+#       Invoice_Memo               => 's:256',              # string(256)
+#       Posting                    => 'v:01|11',            # list('01', '11')
+#       Customer_PO_Number         => 'b',                  # must be blank
+#       Extended_Amount            => 'n:3.2',              # number(000.00)
+#       Range                      => 'r:100000,999999'     # Integer range
+#       );
+#
+# Field definitions:
+#     type: Symphony field type (used to determine data structure needed in JSON)
+#     overlay: If true, update field when updating existing record
+#     validate: Field validation rule to apply to incoming data (ingestor will 
+#                 throw error and skip record if validation fails)
+#     transform: Transformation function which takes validated input from one 
+#                field and returns a valid value
+#     overlay_default: Value to use in update IF FIELD CURRENTLY EMPTY
+#     overlay_value: Value to ALWAYS overlay existing value during update
+#     new_default: Value to use in create IF FIELD CURRENTLY EMPTY
+#     new_value: Value to be used during new create
+admin_contact: Admin Contact<username@domain>
+base_path: /opt/librelibconnected
+incoming_path: /srv/libconnected
 log_level: info
 service_account: libconnected
-base_path: /opt/relibconnected
-incoming_path: /srv/libconnected
-smtp:
-  hostname: email-smtp.us-west-2.amazonaws.com
-  port: 587
-  from: LIBCONNECTED<some.user@domain>
-  user: MAIL_USER
-  pass: MAIL_PASSWORD
-mysql:
-  hostname: localhost
-  port: 3306
-  db_name: libconnected
-  db_username: libconnected
-  db_password: DATABASE_PASSWORD
-  max_checksum_age: 90
-admin_contact: Some User<some.user@domain>
-local_timezone: America/Los_Angeles
+adult_profile: 0_MULT
 ilsws:
-  username: USER
+  username: USERNAME
   password: PASSWORD
   hostname: HOSTNAME
-  port: 443
-  webapp: APPLICATION
-  app_id: relibconnected
+  port: PORT
+  webapp: WEBAPP
   client_id: CLIENT_ID
+  app_id: relibconnected
   user_privilege_override: OVERRIDE
-  timeout: 20
+  timeout: 40
   max_retries: 3
+mysql:
+  hostname: localhost
+  port: DB_PORT
+  db_name: DB_NAME
+  db_username: DB_USERNAME
+  db_password: DB_PASSWORD
+  max_checksum_age: 90
+smtp:
+  hostname: SMTP_HOST
+  port: SMTP_PORT
+  from: SMTP_EMAIL_ADDRESS
+  user: SMTP_USER
+  pass: SMTP_PASS
 clients:
-  - id: '01'
-    authorized_key: SSH_KEY
+  - id: '40'
+    authorized_key: KEY
     namespace: pps
     schema: district
-    name: multcolib.org
-    contact: Some User <some.user@domain>
+    name: DDSD
+    contact: District Contact<username@domain>
+    email_reports: false
+    fields:
+      alternateID:
+        type: string
+        overlay: false
+        validate: s:14
+      barcode:
+        type: string
+        overlay: true
+        validate: s:14
+        transform: c:transform_barcode
+      firstName:
+        type: string
+        overlay: false
+        validate: s:25
+      middleName: 
+        type: string
+        overlay: false
+        validate: s:25
+      lastName:
+        type: string
+        overlay: false
+        validate: s:60
+      street:
+        type: address
+        overlay: true
+        validate: s:128
+        transform: c:transform_street  # Transforms to match USPS address formatting guidelines
+        new_default: "205 NE Russell St"
+      city:
+        type: none
+        overlay: true
+        validate: s:128
+        transform: c:transform_city  # Transforms to match USPS address formatting guidelines
+        new_default: Portland
+      state:
+        type: none
+        overlay: true
+        validate: v:OR|WA
+        transform: c:transform_state  # Transforms to match USPS address formatting guidelines
+        new_default: OR
+      cityState:
+        overlay: true
+        type: address
+        validate: s:40
+        transform: c:transform_cityState
+      zipCode:
+        type: address
+        overlay: true
+        validate: c:validate_zipCode  # ##### or #####-####
+        new_default: 97212
+      birthDate:
+        type: date
+        overlay: true
+        validate: s:22
+        transform: c:transform_birthDate  # Accepts MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM and returns YYYY-MM-DD
+      email: 
+        type: address
+        overlay: false
+        validate: c:validate_email  # Tests for valid email address format
+      pin:
+        type: string
+        overlay: false
+        validate: s:25
+        transform: c:transform_pin  # Creates pin from birthDate
+      profile:
+        type: resource
+        overlay: true
+        new_value: 1_MULT_Y
+        overlay_value: 1_MULT_Y
+        validate: v:0_MULT|1_MULT_Y
+        transform: c:transform_profile  # Accepts date of birth in YYYY-MM-DD and returns 1_MULT_Y until over 13, then 0_MULT
+      library:
+        type: resource
+        overlay: false
+        validate: v:ALB|BMT|CAP|CEN|FRV|GRG|GSM|HDL|HGT|HWD|KEN|MID|NPO|NRW|ROC|SEL|STJ|TRT|WLS|WOD
+        new_value: MID
+      category01:
+        type: category
+        overlay: true
+        validate: v:0_MULT|1_CLACK|2_WASH|3_HOOD|4_OTHER_OR|7_CLARK_WA|CAMAS_WA|KLICK_WA|OTHER|SKAMA_WA|UNKNOWN
+        overlay_value: O_MULT
+        new_value: O_MULT
+      category02:
+        type: category
+        overlay: false
+        validate: v:EMAIL|PHONE|TEXT|UNKNOWN|US_MAIL|Z_NONE
+        new_value: US_MAIL
+      category03:
+        type: category
+        overlay: true
+        validate: v:01-PPS|03-PSD|07-RSD|10-GBSD|28-CSD|40-DDSD
+      category07:
+        type: category
+        overlay: true
+        validate: v:BOOKS2U|CONNECT|EVERYCHILD|LISTOS|PCO|RR_AGENCY|SCHOOL_OUT|SCHOOLCORP|WSYL|UNKNOWN
+        overlay_value: CONNECT
+        new_value: CONNECT
+  - id: '10'
+    authorized_key: KEY
+    namespace: multco
+    schema: district
+    name: GBSD
+    contact: District Contact<username@domain>
+    email_reports: false
+    fields:
+      alternateID:
+        type: string
+        overlay: false
+        validate: s:14
+      barcode:
+        type: string
+        overlay: true
+        validate: s:14
+        transform: c:transform_barcode
+      firstName:
+        type: string
+        overlay: false
+        validate: s:25
+      middleName: 
+        type: string
+        overlay: false
+        validate: s:25
+      lastName:
+        type: string
+        overlay: false
+        validate: s:60
+      street:
+        type: address
+        overlay: true
+        validate: s:128
+        transform: c:transform_street  # Transforms to match USPS address formatting guidelines
+      city:
+        type: none
+        overlay: true
+        validate: s:128
+        transform: c:transform_city  # Transforms to match USPS address formatting guidelines
+      state:
+        type: none
+        overlay: true
+        validate: v:OR|WA
+        transform: c:transform_state  # Transforms to match USPS address formatting guidelines
+      cityState:
+        type: address
+        overlay: true
+        validate: s:40
+        transform: c:transform_cityState  # Combines the city and state fields to form cityState
+      zipCode:
+        type: address
+        overlay: true
+        validate: c:validate_zipCode  # ##### or #####-####
+      birthDate:
+        type: date
+        overlay: true
+        validate: s:22
+        transform: c:transform_birthDate  # Accepts MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM and returns YYYY-MM-DD
+      email: 
+        type: address
+        overlay: false
+        validate: c:validate_email  # Tests for valid email address format
+      pin:
+        type: string
+        overlay: false
+        validate: s:25
+        transform: c:transform_pin  # Creates pin from birthDate
+      profile:
+        type: resource
+        overlay: true
+        new_value: 1_MULT_Y
+        overlay_value: 1_MULT_Y
+        validate: v:0_MULT|1_MULT_Y
+        transform: c:transform_profile  # Accepts date of birth in YYYY-MM-DD and returns 1_MULT_Y until over 13, then 0_MULT
+      library:
+        type: resource
+        overlay: false
+        validate: v:ALB|BMT|CAP|CEN|FRV|GRG|GSM|HDL|HGT|HWD|KEN|MID|NPO|NRW|ROC|SEL|STJ|TRT|WLS|WOD
+        new_value: GSM
+      category01:
+        type: category
+        overlay: true
+        validate: v:0_MULT|1_CLACK|2_WASH|3_HOOD|4_OTHER_OR|7_CLARK_WA|CAMAS_WA|KLICK_WA|OTHER|SKAMA_WA|UNKNOWN
+        overlay_value: O_MULT
+        new_value: O_MULT
+      category02:
+        type: category
+        overlay: false
+        validate: v:EMAIL|PHONE|TEXT|UNKNOWN|US_MAIL|Z_NONE
+        new_value: US_MAIL
+      category03:
+        type: category
+        overlay: true
+        validate: v:01-PPS|03-PSD|07-RSD|10-GBSD|28-CSD|40-DDSD
+      category07:
+        type: category
+        overlay: true
+        validate: v:BOOKS2U|CONNECT|EVERYCHILD|LISTOS|PCO|RR_AGENCY|SCHOOL_OUT|SCHOOLCORP|WSYL|UNKNOWN
+        overlay_value: CONNECT
+        new_value: CONNECT
+  - id: '28'
+    authorized_key: KEY
+    namespace: multco
+    schema: district
+    name: CSD
+    contact: District Contact<username@domain>
+    email_reports: false
+    fields:
+      alternateID:
+        type: string
+        overlay: false
+        validate: s:14
+      barcode:
+        type: string
+        overlay: true
+        validate: s:14
+        transform: c:transform_barcode
+      firstName:
+        type: string
+        overlay: false
+        validate: s:25
+      middleName: 
+        type: string
+        overlay: false
+        validate: s:25
+      lastName:
+        type: string
+        overlay: false
+        validate: s:60
+      street:
+        type: list
+        overlay: true
+        validate: s:128
+        transform: c:transform_street  # Transforms to match USPS address formatting guidelines
+      city:
+        type: none
+        overlay: true
+        validate: s:128
+        transform: c:transform_city  # Transforms to match USPS address formatting guidelines
+      state:
+        type: none
+        overlay: true
+        validate: v:OR|WA
+        transform: c:transform_state  # Transforms to match USPS address formatting guidelines
+      cityState:
+        type: address
+        overlay: true
+        validate: s:40
+        transform: c:transform_cityState  # Combines the city and state fields to form cityState
+      zipCode:
+        type: address
+        overlay: true
+        validate: c:validate_zipCode  # ##### or #####-####
+      birthDate:
+        type: date
+        overlay: true
+        validate: s:22
+        transform: c:transform_birthDate  # Accepts MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM and returns YYYY-MM-DD
+      email: 
+        type: address
+        overlay: false
+        validate: c:validate_email  # Tests for valid email address format
+      pin:
+        type: string
+        overlay: false
+        validate: s:25
+        transform: c:transform_pin  # Creates pin from birthDate
+      profile:
+        type: resource
+        overlay: true
+        new_value: 1_MULT_Y
+        overlay_value: 1_MULT_Y
+        validate: v:0_MULT|1_MULT_Y
+        transform: c:transform_profile  # Accepts date of birth in YYYY-MM-DD and returns 1_MULT_Y until over 13, then 0_MULT
+      library:
+        type: resource
+        overlay: false
+        validate: v:ALB|BMT|CAP|CEN|FRV|GRG|GSM|HDL|HGT|HWD|KEN|MID|NPO|NRW|ROC|SEL|STJ|TRT|WLS|WOD
+        new_value: ROC
+      category01:
+        type: category
+        overlay: true
+        validate: v:0_MULT|1_CLACK|2_WASH|3_HOOD|4_OTHER_OR|7_CLARK_WA|CAMAS_WA|KLICK_WA|OTHER|SKAMA_WA|UNKNOWN
+        overlay_value: O_MULT
+        new_value: O_MULT
+      category02:
+        type: category
+        overlay: false
+        validate: v:EMAIL|PHONE|TEXT|UNKNOWN|US_MAIL|Z_NONE
+        new_value: US_MAIL
+      category03:
+        type: category
+        overlay: true
+        validate: v:01-PPS|03-PSD|07-RSD|10-GBSD|28-CSD|40-DDSD
+      category07:
+        type: category
+        overlay: true
+        validate: v:BOOKS2U|CONNECT|EVERYCHILD|LISTOS|PCO|RR_AGENCY|SCHOOL_OUT|SCHOOLCORP|WSYL|UNKNOWN
+        overlay_value: CONNECT
+        new_value: CONNECT
+  - id: '03'
+    authorized_key: KEY
+    namespace: multco
+    schema: district
+    name: PSD
+    contact: District Contact<username@domain>
+    email_reports: false
+    fields:
+      alternateID:
+        type: string
+        overlay: false
+        validate: s:14
+      barcode:
+        type: string
+        overlay: true
+        validate: s:14
+        transform: c:transform_barcode
+      firstName:
+        type: string
+        overlay: false
+        validate: s:25
+      middleName: 
+        type: string
+        overlay: false
+        validate: s:25
+      lastName:
+        type: string
+        overlay: false
+        validate: s:60
+      street:
+        type: address
+        overlay: true
+        validate: s:128
+        transform: c:transform_street  # Transforms to match USPS address formatting guidelines
+      city:
+        type: none
+        overlay: true
+        validate: s:128
+        transform: c:transform_city  # Transforms to match USPS address formatting guidelines
+      state:
+        type: none
+        overlay: true
+        validate: v:OR|WA
+        transform: c:transform_state  # Transforms to match USPS address formatting guidelines
+      cityState:
+        type: address
+        overlay: true
+        validate: s:40
+        transform: c:transform_cityState  # Combines the city and state fields to form cityState
+      zipCode:
+        type: address
+        overlay: true
+        validate: c:validate_zipCode  # ##### or #####-####
+      birthDate:
+        type: date
+        overlay: true
+        validate: s:22
+        transform: c:transform_birthDate  # Accepts MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM and returns YYYY-MM-DD
+      email: 
+        type: address
+        overlay: false
+        validate: c:validate_email  # Tests for valid email address format
+      pin:
+        type: string
+        overlay: false
+        validate: s:25
+        transform: c:transform_pin  # Creates pin from birthDate
+      profile:
+        type: resource
+        overlay: true
+        new_value: 1_MULT_Y
+        overlay_value: 1_MULT_Y
+        validate: v:0_MULT|1_MULT_Y
+        transform: c:transform_profile  # Accepts date of birth in YYYY-MM-DD and returns 1_MULT_Y until over 13, then 0_MULT
+      library:
+        type: resource
+        overlay: false
+        validate: v:ALB|BMT|CAP|CEN|FRV|GRG|GSM|HDL|HGT|HWD|KEN|MID|NPO|NRW|ROC|SEL|STJ|TRT|WLS|WOD
+        new_value: MID
+      category01:
+        type: category
+        overlay: true
+        validate: v:0_MULT|1_CLACK|2_WASH|3_HOOD|4_OTHER_OR|7_CLARK_WA|CAMAS_WA|KLICK_WA|OTHER|SKAMA_WA|UNKNOWN
+        overlay_value: O_MULT
+        new_value: O_MULT
+      category02:
+        type: category
+        overlay: false
+        validate: v:EMAIL|PHONE|TEXT|UNKNOWN|US_MAIL|Z_NONE
+        new_value: US_MAIL
+      category03:
+        type: category
+        overlay: true
+        validate: v:01-PPS|03-PSD|07-RSD|10-GBSD|28-CSD|40-DDSD
+      category07:
+        type: category
+        overlay: true
+        validate: v:BOOKS2U|CONNECT|EVERYCHILD|LISTOS|PCO|RR_AGENCY|SCHOOL_OUT|SCHOOLCORP|WSYL|UNKNOWN
+        overlay_value: CONNECT
+        new_value: CONNECT
+  - id: '01'
+    authorized_key: KEY
+    namespace: pps
+    schema: pps
+    name: PPS
+    contact: District Contact<username@domain>
     email_reports: true
-    new_defaults:
-      home_library: MID
-      user_profile: 0_MULT
-      youth_profile: 1_MULT_Y
-      user_categories:
-        1: 0_MULT
-        2: US_MAIL
-        3: 89TEST
-        7: CONNECT
-    overlay_defaults:
-      home_library: MID
-      user_profile: 0_MULT
-      youth_profile: 1_MULT_Y
-      user_categories:
-        3: 89TEST
-        7: CONNECT
+    fields:
+      alternateID:
+        type: string
+        overlay: false
+        validate: s:14
+      barcode:
+        type: string
+        overlay: true
+        validate: s:14
+        transform: c:transform_barcode
+      firstName:
+        type: string
+        overlay: false
+        validate: s:25
+      middleName: 
+        type: string
+        overlay: false
+        validate: s:25
+      lastName:
+        type: string
+        overlay: false
+        validate: s:60
+      street:
+        type: address
+        overlay: true
+        validate: s:128
+        transform: c:transform_street  # Transforms to match USPS address formatting guidelines
+      city:
+        type: none
+        overlay: true
+        validate: s:128
+        transform: c:transform_city  # Transforms to match USPS address formatting guidelines
+      state:
+        type: none
+        overlay: true
+        validate: v:OR|WA
+        transform: c:transform_state  # Transforms to match USPS address formatting guidelines
+      cityState:
+        type: address
+        overlay: true
+        validate: s:40
+        transform: c:transform_cityState  # Combines the city and state fields to form cityState
+      zipCode:
+        type: address
+        overlay: true
+        validate: c:validate_zipCode  # ##### or #####-####
+      birthDate:
+        type: date
+        overlay: true
+        validate: s:22
+        transform: c:transform_birthDate  # Accepts MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM and returns YYYY-MM-DD
+      email: 
+        type: address
+        overlay: false
+        validate: c:validate_email  # Tests for valid email address format
+      pin:
+        type: string
+        overlay: false
+        validate: s:25
+        transform: c:transform_pin  # Creates pin from birthDate
+      profile:
+        type: resource
+        overlay: true
+        new_value: 1_MULT_Y
+        overlay_value: 1_MULT_Y
+        validate: v:0_MULT|1_MULT_Y
+        transform: c:transform_profile  # Accepts date of birth in YYYY-MM-DD and returns 1_MULT_Y until over 13, then 0_MULT
+      library:
+        type: resource
+        overlay: false
+        validate: v:ALB|BMT|CAP|CEN|FRV|GRG|GSM|HDL|HGT|HWD|KEN|MID|NPO|NRW|ROC|SEL|STJ|TRT|WLS|WOD
+        new_value: CEN
+      category01:
+        type: category
+        overlay: true
+        validate: v:0_MULT|1_CLACK|2_WASH|3_HOOD|4_OTHER_OR|7_CLARK_WA|CAMAS_WA|KLICK_WA|OTHER|SKAMA_WA|UNKNOWN
+        overlay_value: O_MULT
+        new_value: O_MULT
+      category02:
+        type: category
+        overlay: false
+        validate: v:EMAIL|PHONE|TEXT|UNKNOWN|US_MAIL|Z_NONE
+        new_value: US_MAIL
+      category03:
+        type: category
+        overlay: true
+        validate: v:01-PPS|03-PSD|07-RSD|10-GBSD|28-CSD|40-DDSD
+      category07:
+        type: category
+        overlay: true
+        validate: v:BOOKS2U|CONNECT|EVERYCHILD|LISTOS|PCO|RR_AGENCY|SCHOOL_OUT|SCHOOLCORP|WSYL|UNKNOWN
+        overlay_value: CONNECT
+        new_value: CONNECT
+  - id: '07'
+    authorized_key: KEY
+    namespace: rsd
+    schema: district
+    name: RSD
+    contact: District Contact<username@domain>
+    email_reports: false
+    fields:
+      alternateID:
+        type: string
+        overlay: false
+        validate: s:14
+      barcode:
+        type: string
+        overlay: true
+        validate: s:14
+        transform: c:transform_barcode
+      firstName:
+        type: string
+        overlay: false
+        validate: s:25
+      middleName: 
+        type: string
+        overlay: false
+        validate: s:25
+      lastName:
+        type: string
+        overlay: false
+        validate: s:60
+      street:
+        type: address
+        overlay: true
+        validate: s:128
+        transform: c:transform_street  # Transforms to match USPS address formatting guidelines
+      city:
+        type: none
+        overlay: true
+        validate: s:128
+        transform: c:transform_city  # Transforms to match USPS address formatting guidelines
+      state:
+        type: none
+        overlay: true
+        validate: v:OR|WA
+        transform: c:transform_state  # Transforms to match USPS address formatting guidelines
+      cityState:
+        type: address
+        overlay: true
+        validate: s:40
+        transform: c:transform_cityState  # Combines the city and state fields to form cityState
+      zipCode:
+        type: address
+        overlay: true
+        validate: c:validate_zipCode  # ##### or #####-####
+      birthDate:
+        type: date
+        overlay: true
+        validate: s:22
+        transform: c:transform_birthDate  # Accepts MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM and returns YYYY-MM-DD
+      email: 
+        type: address
+        overlay: false
+        validate: c:validate_email  # Tests for valid email address format
+      pin:
+        type: string
+        overlay: false
+        validate: s:25
+        transform: c:transform_pin  # Creates pin from birthDate
+      profile:
+        type: resource
+        overlay: true
+        new_value: 1_MULT_Y
+        overlay_value: 1_MULT_Y
+        validate: v:0_MULT|1_MULT_Y
+        transform: c:transform_profile  # Accepts date of birth in YYYY-MM-DD and returns 1_MULT_Y until over 13, then 0_MULT
+      library:
+        type: resource
+        overlay: false
+        validate: v:ALB|BMT|CAP|CEN|FRV|GRG|GSM|HDL|HGT|HWD|KEN|MID|NPO|NRW|ROC|SEL|STJ|TRT|WLS|WOD
+        new_value: TRT
+      category01:
+        type: category
+        overlay: true
+        validate: v:0_MULT|1_CLACK|2_WASH|3_HOOD|4_OTHER_OR|7_CLARK_WA|CAMAS_WA|KLICK_WA|OTHER|SKAMA_WA|UNKNOWN
+        overlay_value: O_MULT
+        new_value: O_MULT
+      category02:
+        type: category
+        overlay: false
+        validate: v:EMAIL|PHONE|TEXT|UNKNOWN|US_MAIL|Z_NONE
+        new_value: US_MAIL
+      category03:
+        type: category
+        overlay: true
+        validate: v:01-PPS|03-PSD|07-RSD|10-GBSD|28-CSD|40-DDSD
+      category07:
+        type: category
+        overlay: true
+        validate: v:BOOKS2U|CONNECT|EVERYCHILD|LISTOS|PCO|RR_AGENCY|SCHOOL_OUT|SCHOOLCORP|WSYL|UNKNOWN
+        overlay_value: CONNECT
+        new_value: CONNECT
