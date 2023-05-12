@@ -148,7 +148,8 @@ software.
 the software, under `/var/log/`. You may want to add a `relibconnected` 
 configuration file under `/etc/logrotate.d/` to avoid uncontrolled log growth.
 
-8. Copy `AddressFormat.pm` and `ILSWS.pm` to `/usr/local/lib/site_perl/`. Create 
+8. Copy `AddressFormat.pm`,`DataHandler.pm`, and `ILSWS.pm` to `/usr/local/lib/site_perl/` 
+or some other directory in the Perl include path. You may need to create 
 the directory (as root) if it doesn't already exist. This will put the modules 
 into a path where Perl looks for modules. Recent versions of Perl do not, by 
 default, look in the current working directory.
