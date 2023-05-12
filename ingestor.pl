@@ -12,15 +12,13 @@ use warnings;
 use utf8;
 use 5.010;
 
-# Load modules
+# Load CPAN modules
 use File::Basename;
 use File::Copy qw(copy);
 use Log::Log4perl qw(get_logger :levels);
 use YAML::Tiny;
 use Parse::CSV;
 use Date::Calc qw(check_date Today leap_year Delta_Days Decode_Date_US);
-use AddressFormat;
-use DataHandler qw(validate validate_date);
 use Email::Mailer;
 use Switch;
 use Data::Dumper qw(Dumper);
@@ -30,6 +28,10 @@ use Try::Tiny;
 use Digest::MD5 qw(md5_hex);
 use DBI;
 use DBD::mysql;
+
+# Load local modules
+use AddressFormat;
+use DataHandler;
 
 our $yaml;
 BEGIN {
@@ -41,8 +43,8 @@ BEGIN {
 use ILSWS $yaml->[0]->{'base_path'};
 
 # Valid fields in uploaded CSV files
-our @district_schema = qw(student_id first_name middle_name last_name address city state zipcode dob email);
-our @pps_schema      = qw(first_name middle_name last_name student_id address city state zipcode dob email);
+our @district_schema = qw(barcode firstName middleName lastName street city state zipCode birthDate email);
+our @pps_schema      = qw(firstName middleName lastName barcode street city state zipCode birthDate email);
 
 # Some globals for storing counts
 our $update_cnt = 0;
@@ -129,9 +131,25 @@ my $parser = Parse::CSV->new( handle => $data_fh, sep_char => ',', names => 1 );
 
 # Change all field names to lower case. The @fields array is global so it may
 # be used in multiple functions without passing it around.
+#
+# This hash converts incoming field names to those expected by Symphony
+# and used in the config.yaml file.
+my %symphony_names = (
+  student_id => 'barcode',
+  first_name => 'firstName',
+  middle_name => 'middleName',
+  last_name => 'lastName',
+  address => 'street',
+  city => 'city',
+  state => 'state',
+  zipcode => 'zipCode',
+  dob => 'birthDate',
+  email => 'email',
+  );
+
 our @fields = $parser->names;
 foreach my $i ( 0 .. $#fields ) {
-  $fields[$i] = lc($fields[$i]);
+  $fields[$i] = $symphony_names{lc($fields[$i])};
 }
 $parser->names(@fields);
 
@@ -169,12 +187,12 @@ while ( my $student = $parser->fetch ) {
   my $errors = 0;
   foreach my $key (keys %{$student}) {
 
-    # If the student has no address (a private address), then set the address
+    # If the student has no street (a private street), then set the address
     # to the ISOM Building.
-    if ( ! $student->{'address'} && ! $student->{'city'} && ! $student->{'zipcode'} ) {
-      $student->{'address'} = '205 NE Russell St';
+    if ( ! $student->{'street'} && ! $student->{'city'} && ! $student->{'zipCode'} ) {
+      $student->{'street'} = '205 NE Russell St';
       $student->{'city'} = 'Portland';
-      $student->{'zipcode'} = '97212';
+      $student->{'zipCode'} = '97212';
     }
 
     # Validate data in each field as configured in config.yaml
@@ -196,7 +214,7 @@ while ( my $student = $parser->fetch ) {
 
     # We got errors when validating this student's data, so log and skip 
     # this record
-    &logger('error', "Skipping $student->{'last_name'}, $student->{'first_name'} ($student->{'student_id'} at line $lineno) due to data error(s)");
+    &logger('error', "Skipping $student->{'lastName'}, $student->{'firstName'} ($student->{'barcode'} at line $lineno) due to data error(s)");
 
   } else {
 
@@ -297,7 +315,7 @@ sub process_student {
 
   # Check for existing patron with same student ID in the ALT_ID field
   my %options = ( ct => 1, includeFields => 'barcode' );
-  my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'student_id'}", \%options);
+  my $existing = ILSWS::patron_alt_id_search($token, "$client->{'id'}$student->{'barcode'}", \%options);
 
   if ( $existing ) {
 
@@ -306,7 +324,7 @@ sub process_student {
 
     } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $alt_id_cnt++;
-        $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+        $student->{'existing_barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Alt ID', $lineno);
         $update_cnt++;
         return 1;
@@ -332,7 +350,7 @@ sub process_student {
 
       } elsif ( $existing->{'totalResults'} == 1 && $existing->{'result'}->[0]->{'key'} ) {
         $email_cnt++;
-        $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+        $student->{'existing_barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
         &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'Email', $lineno);
         $update_cnt++;
         return 1;
@@ -345,7 +363,7 @@ sub process_student {
 
   # Check for existing patron with same student ID in the ID field (barcode)
   %options = ( ct => 1, includeFields => 'barcode' );
-  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'student_id'}", \%options);
+  $existing = ILSWS::patron_barcode_search($token, "$client->{'id'}$student->{'barcode'}", \%options);
 
   if ( $existing ) {
 
@@ -356,7 +374,7 @@ sub process_student {
 
       # $student
       $id_cnt++;
-      $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+      $student->{'existing_barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
       &update_student($token, $client, $student, $existing->{'result'}->[0]->{'key'}, 'ID', $lineno);
       $update_cnt++;
       return 1;
@@ -367,7 +385,7 @@ sub process_student {
     &logger('error', $ILSWS::error);
   }
 
-  # Search by DOB and address
+  # Search by DOB and street
   $existing = &search($token, $client, $student);
 
   if ( $#{$existing} == 0 ) {
@@ -375,7 +393,7 @@ sub process_student {
     # Looks like this student may have moved
     if ( defined $existing->[0]->{'key'} ) {
       $dob_street_cnt++;
-      $student->{'existing_id'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
+      $student->{'existing_barcode'} = $existing->{'result'}->[0]->{'fields'}->{'barcode'};
       &update_student($token, $client, $student, $existing->[0]->{'key'}, 'DOB and Street', $lineno);
       $update_cnt++;
     }
@@ -399,7 +417,7 @@ sub process_student {
 }
 
 ###############################################################################
-# Search ILSWS on DOB and address to match existing student
+# Search ILSWS on DOB and street to match existing student
 
 sub search {
   my $token = shift;
@@ -409,7 +427,7 @@ sub search {
   my @results = ();
   my $csv = get_logger('csv');
 
-  my ($year, $mon, $day) = split /-/, $student->{'dob'};
+  my ($year, $mon, $day) = split /-/, $student->{'birthDate'};
   my %options = ( ct => 1000, includeFields => 'barcode,firstName,middleName,lastName' );
   my $bydob = ILSWS::patron_search($token, 'BIRTHDATE', "${year}${mon}${day}", \%options);
 
@@ -418,8 +436,8 @@ sub search {
     # If we found a person or persons with student's DOB, then we continue
     # by searching via street.
     
-    # Remove punctuation from address before searching
-    my $street = $student->{'address'};
+    # Remove punctuation from street before searching
+    my $street = $student->{'street'};
     $street =~ s/#//g;
     my $bystreet = ILSWS::patron_search($token, 'STREET', $street, \%options);
 
@@ -437,9 +455,9 @@ sub search {
           # Add each ambiguous record to the CSV log with the ID and name
           # information. Put the student ID in the the ID field along with the 
           # matching record ID, so the CSV can be storted appropriately. Add 
-          # name and addresss from matching records.
+          # name and streets from matching records.
           my $message = qq|"Ambiguous","DOB and Street",|;
-          $message   .= qq|"$student->{'student_id'}, $results[$i]{'key'}",|;
+          $message   .= qq|"$student->{'barcode'}, $results[$i]{'key'}",|;
           $message   .= qq|"$results[$i]{'fields'}->{'firstName'}",|;
           if ( $results[$i]{'fields'}->{'middleName'} ) {
             $message   .= qq|"$results[$i]{'fields'}->{'middleName'}",|;
@@ -514,7 +532,7 @@ sub create_student {
     # Send the patron create JSON to ILSWS
     $res = ILSWS::patron_create($token, $student_json);
     if ( ! $res ) {
-      &logger('error', "Failed to create $client->{'id'}$student->{'student_id'} (line $lineno) on attempt $retries: " . &print_line($student));
+      &logger('error', "Failed to create $client->{'id'}$student->{'barcode'} (line $lineno) on attempt $retries: " . &print_line($student));
       &logger('error', "$ILSWS::code: $ILSWS::error");
     }
     sleep($retries);
@@ -526,7 +544,7 @@ sub create_student {
     $csv->info('"Create","",' . &print_line($student));
     &logger(
       'debug', 
-      "CREATE: $student->{'last_name'}, $student->{'first_name'} $student->{'student_id'} as $client->{'id'}$student->{'student_id'}"
+      "CREATE: $student->{'lastName'}, $student->{'firstName'} $student->{'barcode'} as $client->{'id'}$student->{'barcode'}"
       );
   }
 }
@@ -578,7 +596,7 @@ sub update_student {
     # Send the patron update JSON to ILSWS
     $res = ILSWS::patron_update($token, $student_json, $key);
     if ( ! $res ) {
-      &logger('error', "Failed to update $client->{'id'}$student->{'student_id'} (line $lineno) on attempt $retries: " . &print_line($student));
+      &logger('error', "Failed to update $client->{'id'}$student->{'barcode'} (line $lineno) on attempt $retries: " . &print_line($student));
       &logger('error', "$ILSWS::code: $ILSWS::error");
     }
     sleep($retries);
@@ -590,7 +608,7 @@ sub update_student {
     $csv->info(qq|"Update","$match",| . &print_line($student));
     &logger(
       'debug', 
-      "OVERLAY: $student->{'last_name'}, $student->{'first_name'} $student->{'student_id'} as $client->{'id'}$student->{'student_id'}"
+      "OVERLAY: $student->{'lastName'}, $student->{'firstName'} $student->{'barcode'} as $client->{'id'}$student->{'barcode'}"
       );
   }
 }
@@ -602,44 +620,52 @@ sub update_student {
 sub create_data_structure {
   my $student = shift;
   my $key = shift;
-  my $mode = $key =~ /^\d+$/ ? 'overlay' : 'new';
 
   # Hash to associate resources with field names. Only needed for resources 
   # and categories, not strings
-  my %resources = (
-    'category01'  => 'patronCategory01',
-    'category02'  => 'patronCategory02',
-    'category03'  => 'patronCategory03',
-    'category04'  => 'patronCategory04',
-    'category05'  => 'patronCategory05',
-    'category06'  => 'patronCategory06',
-    'category07'  => 'patronCategory07',
-    'category08'  => 'patronCategory08',
-    'category09'  => 'patronCategory09',
-    'category10'  => 'patronCategory10',
-    'category11'  => 'patronCategory11',
-    'category12'  => 'patronCategory12',
-    'library'     => 'library',
-    'profile'     => 'userProfile',
+  my %resource = (
+    'category01' => 'patronCategory01',
+    'category02' => 'patronCategory02',
+    'category03' => 'patronCategory03',
+    'category04' => 'patronCategory04',
+    'category05' => 'patronCategory05',
+    'category06' => 'patronCategory06',
+    'category07' => 'patronCategory07',
+    'category08' => 'patronCategory08',
+    'category09' => 'patronCategory09',
+    'category10' => 'patronCategory10',
+    'category11' => 'patronCategory11',
+    'category12' => 'patronCategory12',
+    'library'    => 'library',
+    'profile'    => 'userProfile',
+    'street'     => 'STREET',
+    'cityState'  => 'CITY/STATE',
+    'zipCode'    => 'ZIP',
+    'email'      => 'EMAIL',
     );
+
+  # Determine the mode
+  my $mode = $key =~ /^\d+$/ ? 'overlay' : 'new';
 
   my %new_student = ();
   $new_student{'resource'} = '/user/patron';
+  $new_student{'fields'}{'address1'} = []; 
 
-  if ( $mode eq 'n' ) {
+  if ( $mode eq 'overlay' ) {
     $new_student{'key'} = $key;
   }
 
-  foreach my $field (keys $client->{'fields'}) {
+  foreach my $field (sort keys %{$client->{'fields'}}) {
+    print "$field: $student->{$field}\n";
 
     # Execute defaults, validations and transformations for fields not in the schema
-    if ( ! in_array(\@district_schema, $field) ) {
+    if ( ! &in_array(\@district_schema, $field) ) {
 
       # Set defaults based on mode
-      if ( $client->{$field}->{$mode . '_default'} ) {
-        $student->{$field} = $client->{$field}->{$mode . '_default'} unless $student->{$field};
+      if ( $client->{'fields'}->{$field}->{$mode . '_default'} ) {
+        $student->{$field} = $client->{'fields'}->{$field}->{$mode . '_default'} unless $student->{$field};
       }
-      $student->{$field} = $client->{$field}->{$mode . '_value'} if $client->{$field}->{$mode . '_value'};
+      $student->{$field} = $client->{'fields'}->{$field}->{$mode . '_value'} if $client->{'fields'}->{$field}->{$mode . '_value'};
         
       # Validate
       $student->{$field} = &validate_field($field, $student->{$field}, $client, $student);
@@ -647,58 +673,40 @@ sub create_data_structure {
       # Transform
       $student->{$field} = &transform_field($field, $student->{$field}, $client, $student);
     }
+    print "$field: $student->{$field}\n";
 
-    switch ( $client->{$field}->{'type'} ) {
-        case 'string' {
-            if ( $mode eq 'new' || $client->{$field}->{'overlay'} eq 'true' ) {
-                $new_student{'fields'}{$field} = $student->{$field};
-            }
+    switch($client->{'fields'}->{$field}->{'type'}) {
+      case 'string' {
+        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+          $new_student{'fields'}{$field} = $student->{$field};
         }
-        case 'resource' {
-            if ( $mode eq 'new' || $client->{$field}->{'overlay'} eq 'true' } {
-                $new_student{'fields'}{$field}{'resource'} = "/policy/$resource{$field}";
-                $new_student{'fields'}{$field}{'key'} = $student->{$field};
-            }
-        case 'category' {
-            if ( $mode eq 'new' || $client->{$field}->{'overlay'} eq 'true' } {
-                $new_student{'fields'}{$field}{'resource'} = '/policy/$resource{$field}';
-            }
-        default {
+      }
+      case 'resource' {
+        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+          $new_student{'fields'}{$field}{'resource'} = "/policy/$resource{$field}";
+          $new_student{'fields'}{$field}{'key'} = $student->{$field};
+          }
+      }
+      case 'category' {
+        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+          $new_student{'fields'}{$field}{'resource'} = "/policy/$resource{$field}";
+          $new_student{'fields'}{$field}{'key'} = $student->{$field};
         }
+      }
+      case 'address' {
+        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+          my %address = ();
+          $address{'resource'} = '/user/patron/address1';
+          $address{'fields'}{'code'}{'key'} = $resource{$field};
+          $address{'fields'}{'code'}{'resource'} = '/policy/patronAddress1';
+          $address{'fields'}{'data'} = $student->{$field};
+          push @{$new_student{'fields'}{'address1'}}, ({%address});
+        }
+      }
     }
-
-  my %street = ();
-  $street{'resource'} = '/user/patron/address1';
-  $street{'fields'}{'code'}{'key'} = 'STREET';
-  $street{'fields'}{'code'}{'resource'} = '/policy/patronAddress1';
-  $street{'fields'}{'data'} = $student->{'address'};
-
-  my %city_state = ();
-  $city_state{'resource'} = '/user/patron/address1';
-  $city_state{'fields'}{'code'}{'key'} = 'CITY/STATE';
-  $city_state{'fields'}{'code'}{'resource'} = '/policy/patronAddress1';
-  $city_state{'fields'}{'data'} = "$student->{'city'}, $student->{'state'}";
-
-  my %zip = ();
-  $zip{'resource'} = '/user/patron/address1';
-  $zip{'fields'}{'code'}{'key'} = 'ZIP';
-  $zip{'fields'}{'code'}{'resource'} = '/policy/patronAddress1';
-  $zip{'fields'}{'data'} = $student->{'zipcode'};
-
-  my %email = ();
-  if ( $mode eq 'new_defaults' && $student->{'email'} ne 'null' ) {
-    $email{'resource'} = '/user/patron/address1';
-    $email{'fields'}{'code'}{'key'} = 'EMAIL';
-    $email{'fields'}{'code'}{'resource'} = '/policy/patronAddress1';
-    $email{'fields'}{'data'} = $student->{'email'};
   }
-
-  $new_student{'fields'}{'address1'} = [ { %street }, { %city_state }, { %zip } ];
-  if ( %email ) {
-    push @{$new_student{'fields'}{'address1'}}, ( { %email } );
-  }
-
   # Return a reference to the student data structure
+  print Dumper(\%new_student);
   return \%new_student;
 }
 
@@ -746,6 +754,7 @@ sub logger {
 sub check_schema {
   my $fields = shift;
   my $valid_fields = shift;
+
   my $errors = 0;
   my $retval = 0;
 
@@ -768,15 +777,15 @@ sub print_line {
 
   # Print out the student fields in a standard order, regardless
   # of the order they were entered in the hash.
-  my $string = qq|"$student->{'student_id'}",|;
-  $string   .= qq|"$student->{'first_name'}",|;
-  $string   .= qq|"$student->{'middle_name'}",|;
-  $string   .= qq|"$student->{'last_name'}",|;
-  $string   .= qq|"$student->{'address'}",|;
+  my $string = qq|"$student->{'barcode'}",|;
+  $string   .= qq|"$student->{'firstName'}",|;
+  $string   .= qq|"$student->{'middleName'}",|;
+  $string   .= qq|"$student->{'lastName'}",|;
+  $string   .= qq|"$student->{'street'}",|;
   $string   .= qq|"$student->{'city'}",|;
   $string   .= qq|"$student->{'state'}",|;
-  $string   .= qq|"$student->{'zipcode'}",|;
-  $string   .= qq|"$student->{'dob'}",|;
+  $string   .= qq|"$student->{'zipCode'}",|;
+  $string   .= qq|"$student->{'birthDate'}",|;
   $string   .= qq|"$student->{'email'}"|;
 
   return $string;
@@ -792,9 +801,9 @@ sub validate_field {
   my $field_name = shift;
   my $value = shift;
   my $client = shift;
-  my $rule = $client->{'fields'}->{$field_name}->{'validation'};
+  my $rule = $client->{'fields'}->{$field_name}->{'validate'};
 
-  if ( substr($rule, 0, 1) eq 'c' ) {
+  if ( $rule && substr($rule, 0, 1) eq 'c' ) {
 
     my $sub = substr($rule, 1);
     if ( exists &{$sub} ) {
@@ -804,9 +813,9 @@ sub validate_field {
       $value = $subroutine->($value);
     }
 
-  } else {
+  } elsif ( $rule ) {
 
-    if ( ! validate($value, $rule) ) {
+    if ( ! DataHandler::validate($value, $rule) ) {
         $value = '';
     }
   }
@@ -824,7 +833,7 @@ sub transform_field {
   my $student = shift;
   my $rule = $client->{'fields'}->{$field_name}->{'transform'};
 
-  if ( substr($rule, 0, 1) eq 'c' ) {
+  if ( $rule && substr($rule, 0, 1) eq 'c' ) {
 
     my $sub = substr($rule, 1);
     if ( exists &{$sub} ) {
@@ -844,20 +853,23 @@ sub transform_field {
 sub transform_barcode {
   my $value = shift;
   my $student = shift;
+  my $client = shift;
 
-  if ( $student->{'existing_id'} =~ /^\d{14}$/ ) {
+  if ( $student->{'existing_barcode'} =~ /^\d{14}$/ || $student->{'existing_barcode'} =~ /^\d{6}$/ ) {
     $student->{'alternate_id'} = $value;
-    $value = $student->{'existing_id'};
-    delete($student->{'existing_id'};
+    $value = $student->{'existing_barcode'};
+    delete($student->{'existing_barcode'});
+  } else {
+    $student->{'barcode'} = $client->{'id'} . $student->{'barcode'};
   }
 
   return $value;
 }
 
 ###############################################################################
-# Validates zipcode as ##### or #####-####.
+# Validates zipCode as ##### or #####-####.
 
-sub validate_zipcode {
+sub validate_zipCode {
   my $value = shift;
   my $retval = '';
 
@@ -872,7 +884,7 @@ sub validate_zipcode {
 # Reformats the date of birth. Accepts dates in two formats:
 # MM/DD/YYYY or M/D/YYYY HH:MM:SS AM|PM
 
-sub transform_dob {
+sub transform_birthDate {
   my $value = shift;
 
   my $retval = '';
@@ -913,13 +925,13 @@ sub validate_email {
 }
 
 ###############################################################################
-# Creates default pin from DOB
+# Creates default pin from birthDate
 
 sub transform_pin {
     my $value = shift;
     my $student = shift;
 
-    my ($year, $mon, $day) = split /\-/, $student->{'dob'};
+    my ($year, $mon, $day) = split /\-/, $student->{'birthDate'};
 
     return "${mon}${day}${year}";
 }
@@ -930,16 +942,14 @@ sub transform_pin {
 sub transform_profile {
     my $value = shift;
     my $student = shift;
-    my $dob = $student->{'dob'};
+    my $birthDate = $student->{'birthDate'};
 
-    my ($year1, $month1, $day1) = split /-/, $dob;
+    my ($year1, $month1, $day1) = split /-/, $birthDate;
     my ($year2, $month2, $day2) = Today();
 
-    if (($day1 == 29) && ($month1 == 2) && !leap_year($year2))
-        { $day1--; }
+    if (($day1 == 29) && ($month1 == 2) && !leap_year($year2)) { $day1--; };
 
-    if ( (($year2 - $year1) >  17) 
-        || ( (($year2 - $year1) == 17) 
+    if ( (($year2 - $year1) >  17) || ( (($year2 - $year1) == 17) 
         && (Delta_Days($year2,$month1,$day1, $year2,$month2,$day2) >= 0) ) ) {
 
         $value = $yaml->[0]->{'adult_profile'};
@@ -951,7 +961,7 @@ sub transform_profile {
 ###############################################################################
 # Use the AddressFormat.pm function to validate and reformat to USPS standards
 
-sub transform_address {
+sub transform_street {
   my $value = shift;
 
   return AddressFormat::format_street($value);
@@ -976,6 +986,18 @@ sub transform_state {
 }
 
 ###############################################################################
+# Combine the city and state into one field
+
+sub transform_cityState {
+  my $value = shift;
+  my $student = shift;
+
+  $value = $student->{'city'} . ', ' . $student->{'state'};
+
+  return $value;
+}
+
+###############################################################################
 # Create a digest (checksum) that can be used when checking if data has
 # changed. Sort the keys so that they always appear in the same order, 
 # regardless of the order they were entered.
@@ -994,7 +1016,7 @@ sub check_for_changes {
   my $client = shift;
   my $dbh = shift;
 
-  my $student_id = $client->{'id'} . $student->{'student_id'};
+  my $barcode = $student->{'barcode'};
 
   # Default is to assume that the data has changed
   my $retval = 1;
@@ -1002,7 +1024,7 @@ sub check_for_changes {
   # Create an MD5 digest from the incoming student data
   my $checksum = &digest($student);
 
-  my $sql = qq|SELECT chksum FROM checksums WHERE student_id = '$student_id'|;
+  my $sql = qq|SELECT chksum FROM checksums WHERE student_id = '$barcode'|;
   my $sth = $dbh->prepare($sql);
   $sth->execute() or &error_handler("Could not search checksums: $dbh->errstr()");
 
@@ -1024,7 +1046,7 @@ sub check_for_changes {
     } else {
 
       # The incoming data has changed, so update the checksum
-      $sql = qq|UPDATE checksums SET chksum = '$checksum' WHERE student_id = '$student_id'|;
+      $sql = qq|UPDATE checksums SET chksum = '$checksum' WHERE student_id = '$barcode'|;
       $sth = $dbh->prepare($sql);
       $sth->execute() or &error_handler("Could not update checksums: $dbh->errstr()");
 
@@ -1034,7 +1056,7 @@ sub check_for_changes {
   } else {
 
     # We did not find a checksum record for this student, so we should add one
-    $sql = qq|INSERT INTO checksums (student_id, chksum, date_added) VALUES ('$student_id', '$checksum', CURDATE())|;
+    $sql = qq|INSERT INTO checksums (student_id, chksum, date_added) VALUES ('$barcode', '$checksum', CURDATE())|;
     $sth = $dbh->prepare($sql);
     $sth->execute() or &error_handler("Could add record to checksums: $dbh->errstr()");
 
