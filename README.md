@@ -202,17 +202,18 @@ to define the way the software will handle incoming data and derivative fields:
 ## Validation Rules
 
 Sample validation rules used in conjunction with the validate field definition keyword:
-| Type                | Example            | Comments         |
-| ---                 | ---                | ---              |
-| `Date1`             | d:YYYY-MM-DD       |                  |
-| `Date2`             | d:YYYY/MM/DD       |                  |
-| `Date3`             | d:MM-DD-YYYY       |                  |
-| `Date4`             | d:MM/DD/YYYY       |                  |
-| `Timestamp1`        | d:YYYY/MM/DD HH:MM |                  |
-| `Timestamp2`        | d:YYYY-MM-DD HH:MM |                  |
-| `Timestamp3`        | d:YYYYMMDDHHMMSS   |                  |
-| `Customer_Reference`| i:8                | int(8)           |
-| `Invoice_Memo`      | s:256              | string(256)      |
-| `Posting`           | v:01|11            | list('01', '11') |
-| `Customer_PO_Number`| b                  | must be blank    |
-| `Extended_Amount`: n:3.2  | number(000.00)
+| Type           | Example            | Comments                 |
+| ---            | ---                | ---                      |
+| Date1          | d:YYYY-MM-DD       |                          |
+| Date2          | d:YYYY/MM/DD       |                          |
+| Date3          | d:MM-DD-YYYY       |                          |
+| Date4          | d:MM/DD/YYYY       |                          |
+| Timestamp1     | d:YYYY/MM/DD HH:MM |                          |
+| Timestamp2     | d:YYYY-MM-DD HH:MM |                          |
+| Timestamp3     | d:YYYYMMDDHHMMSS   |                          |
+| Integer        | i:8                |                          |
+| String         | s:256              | Max length of 256        |
+| List           | v:01|11            | List('01','11')          |
+| Blank          | b                  | Must be blank            |
+| Decimal number | n:3.2              | Number(000.00)           |
+| Integer range  | r:1,9999           | Range between 1 and 9999 |
