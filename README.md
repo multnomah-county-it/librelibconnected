@@ -187,8 +187,9 @@ bin/randomize_checksum_ages.pl config.yaml
 
 # Configuration Notes
 
+## Field Definition Keywords
 When configuring client districts, there a number of keywords that may be used 
-to define the way the software will handle incoming data and derivitive fields:
+to define the way the software will handle incoming data and derivative fields:
 * `type`: Symphony field type (used to determine data structure needed in JSON)
 * `overlay`: If true, update field when updating existing record
 * `validate`: Field validation rule to apply to incoming data (ingestor will throw error and skip record if validation fails)
@@ -197,3 +198,20 @@ to define the way the software will handle incoming data and derivitive fields:
 * `overlay_value`: Value to ALWAYS overlay existing value during update
 * `new_default`: Value to use in create IF FIELD CURRENTLY EMPTY
 * `new_value`: Value to be used during new create
+
+## Validation Rules
+
+Sample validation rules used in conjunction with the validate field definition keyword:
+* `Date1`              = 'd:YYYY-MM-DD',
+* `Date2`              = 'd:YYYY/MM/DD',
+* `Date3`              = `d:MM-DD-YYYY',
+* 'Date4`              = 'd:MM/DD/YYYY',
+* `Timestamp1`         = 'd:YYYY/MM/DD HH:MM',
+* `Timestamp2`         = 'd:YYYY-MM-DD HH:MM',
+* `Timestamp3`         = 'd:YYYYMMDDHHMMSS',
+* `Customer_Reference` = 'i:8',                # int(8)
+* `Invoice_Memo`       = 's:256',              # string(256)
+* `Posting`            = 'v:01|11',            # list('01', '11')
+* `Customer_PO_Number` = 'b',                  # must be blank
+* `Extended_Amount`    = 'n:3.2',              # number(000.00)
+
