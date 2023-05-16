@@ -213,7 +213,7 @@ Sample validation rules used in conjunction with the validate field definition k
 | Timestamp3     | d:YYYYMMDDHHMMSS   |                          |
 | Integer        | i:8                | Length of 8              |
 | String         | s:256              | Max length of 256        |
-| List           | v:01|11            | List('01','11')          |
+| List           | v:01|11            | Pipe delimited list of valid entries |
 | Blank          | b                  | Must be blank            |
 | Decimal number | n:3.2              | Number(000.00)           |
 | Integer range  | r:1,9999           | Range between 1 and 9999 |
