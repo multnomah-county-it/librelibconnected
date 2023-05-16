@@ -184,3 +184,16 @@ to seven days. For example:
 ```
 bin/randomize_checksum_ages.pl config.yaml
 ```
+
+# Configuration Notes
+
+When configuring client districts, there a number of keywords that may be used 
+to define the way the software will handle incoming data and derivitive fields:
+* `type`: Symphony field type (used to determine data structure needed in JSON)
+* `overlay`: If true, update field when updating existing record
+* `validate`: Field validation rule to apply to incoming data (ingestor will throw error and skip record if validation fails)
+* `transform`: Transformation function which takes validated input from one field and returns a valid value
+* `overlay_default`: Value to use in update IF FIELD CURRENTLY EMPTY
+* `overlay_value`: Value to ALWAYS overlay existing value during update
+* `new_default`: Value to use in create IF FIELD CURRENTLY EMPTY
+* `new_value`: Value to be used during new create
