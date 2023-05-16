@@ -217,4 +217,5 @@ Sample validation rules used in conjunction with the validate field definition k
 | Blank          | b                  | Must be blank            |
 | Decimal number | n:3.2              | Number(000.00)           |
 | Integer range  | r:1,9999           | Range between 1 and 9999 |
+
 Note: All dates will be validated against the calendar
