@@ -66,6 +66,7 @@ clients:
     name: DDSD
     contact: District Contact<username@domain>
     email_reports: false
+    email_pattern: EMAIL_DOMAIN
     fields:
       alternateID:
         type: string
@@ -170,6 +171,7 @@ clients:
     name: GBSD
     contact: District Contact<username@domain>
     email_reports: false
+    email_pattern: EMAIL_DOMAIN
     fields:
       alternateID:
         type: string
@@ -270,6 +272,7 @@ clients:
     name: CSD
     contact: District Contact<username@domain>
     email_reports: false
+    email_pattern: EMAIL_DOMAIN
     fields:
       alternateID:
         type: string
@@ -370,6 +373,7 @@ clients:
     name: PSD
     contact: District Contact<username@domain>
     email_reports: false
+    email_pattern: EMAIL_DOMAIN
     fields:
       alternateID:
         type: string
@@ -470,6 +474,7 @@ clients:
     name: PPS
     contact: District Contact<username@domain>
     email_reports: true
+    email_pattern: EMAIL_DOMAIN
     fields:
       alternateID:
         type: string
@@ -570,6 +575,7 @@ clients:
     name: RSD
     contact: District Contact<username@domain>
     email_reports: false
+    email_pattern: EMAIL_DOMAIN
     fields:
       alternateID:
         type: string

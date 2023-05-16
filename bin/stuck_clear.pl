@@ -5,11 +5,11 @@ use warnings;
 use utf8;
 use File::Copy;
 
-my $path = '/opt/relibconnected';
+my $path = '/opt/librelibconnected';
 my $run_path = "$path/run";
 my $log_path = "$path/log";
 my $mailer = '/usr/bin/mailx';
-my $mail_template = '/opt/relibconnected/bin/stuck_clear.txt';
+my $mail_template = '/opt/librelibconnected/bin/stuck_clear.txt';
 
 if ( -e "$run_path/ingestor.flg" ) {
   my $file_age = -M "$run_path/ingestor.flg";

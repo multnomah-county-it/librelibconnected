@@ -5,8 +5,8 @@ use File::Find;
 
 my $path = '/srv/libconnected';
 my $mailer = '/usr/bin/mailx';
-my $mail_template = '/opt/relibconnected/bin/stuck_warn.txt';
-my $flag = '/opt/relibconnected/bin/stuck.flag';
+my $mail_template = '/opt/librelibconnected/bin/stuck_warn.txt';
+my $flag = '/opt/librelibconnected/bin/stuck.flag';
 my $touch = '/usr/bin/touch';
 my $rm = '/usr/bin/rm';
 
