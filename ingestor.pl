@@ -182,7 +182,7 @@ my $dbh = &connect_database;
 
 # Loop through lines of data and check for valid values. Ingest valid lines.
 # The $lineno is a global so we can encorporate it into log or error messages.
-our $lineno = 1;
+our $lineno = 0;
 while ( my $student = $parser->fetch ) {
   my $errors = 0;
   foreach my $field (keys %{$student}) {
@@ -675,8 +675,10 @@ sub create_data_structure {
     # We've finish messing with the data, assign to $student
     $student->{$field} = $value;
 
-    # If a field is empty of undefined remove it from the hash, so we don't try to update the value in the existing record
-    next unless defined($student->{$field});
+    # If a field is null or undefined remove it from the hash, so we don't try to update the value in the existing record
+    if ( ! defined($student->{$field}) || $student->{$field} eq 'null' ) {
+      next;
+    }
 
     switch($client->{'fields'}->{$field}->{'type'}) {
       case 'string' {
@@ -803,6 +805,9 @@ sub validate_field {
   my $field = shift;
   my $value = shift;
   my $client = shift;
+
+  # Check for empty fields and return 'null' if found;
+  return 'null' unless $value;
 
   my $rule = $client->{'fields'}->{$field}->{'validate'};
 
