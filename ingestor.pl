@@ -188,7 +188,7 @@ while ( my $student = $parser->fetch ) {
   foreach my $field (keys %{$student}) {
 
     # Validate data in each field as configured in config.yaml
-    my $value = &validate_field($field, $student->{$field}, $client);
+    my $value = &validate_field($field, $student->{$field}, $client, 1);
 
     # Log any errors, except with email, because that field is not required.
     if ( ! $value ) {
@@ -669,7 +669,7 @@ sub create_data_structure {
 
     # Execute validations for fields not in the incoming data
     if ( ! &in_array(\@district_schema, $field) ) {
-      $value = &validate_field($field, $value, $client, $student);
+      $value = &validate_field($field, $value, $client);
     }
 
     # We've finish messing with the data, assign to $student
@@ -805,26 +805,36 @@ sub validate_field {
   my $field = shift;
   my $value = shift;
   my $client = shift;
+  my $truncate_flag = 1 ? shift : 0;
 
   # Check for empty fields and return 'null' if found;
   return 'null' unless $value;
 
   my $rule = $client->{'fields'}->{$field}->{'validate'};
+  my $type = substr($rule, 0, 1);
+  my $data = substr($rule, 2);
 
-  if ( $rule && substr($rule, 0, 1) eq 'c' ) {
+  # If the type is c, look for a custom subroutine
+  if ( $type eq 'c' ) {
 
-    my $sub = substr($rule, 2);
-    if ( exists &{$sub} ) {
-      my $subroutine = \&{$sub};
+    if ( exists &{$data} ) {
+      my $subroutine = \&{$data};
 
       # Run the function to check the value
       $value = $subroutine->($value);
 
     } else {
-      &logger('error', "Custom validate subroutine $sub not found.");
+      &logger('error', "Custom validate subroutine $data not found.");
     }
 
   } elsif ( $rule ) {
+
+    # If the truncate flag is set, truncate string fields at word boundaries
+    if ( $truncate_flag == 1 ) {
+      if ( $type eq 's' ) {
+          $value = DataHandler::truncate_string($value, $data);
+      }
+    }
 
     if ( ! DataHandler::validate($value, $rule) ) {
         $value = '';
