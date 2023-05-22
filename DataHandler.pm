@@ -22,7 +22,7 @@ use Date::Calc qw(check_date Today_and_Now);
 use Switch;
 use base 'Exporter';
 
-our @EXPORT = qw(load_maps evaluate_map validate validate_date);
+our @EXPORT = qw(load_maps evaluate_map validate validate_date truncate_string);
 
 # Set to 1 for dubugging messages
 our $debug = 0;
@@ -296,5 +296,22 @@ sub validate_date {
 ###############################################################################
 
 ###############################################################################
+# Truncates a string at word boundaries to a specified length
 
+sub truncate_string {
+  my $value = shift;
+  my $length = shift;
+
+  my @words = split /\s+/, $value;
+  while ( length($value) > $length ) {
+    pop @words;
+    $value = join(' ', @words);
+  }
+
+  return $value;
+}
+
+###############################################################################
+
+###############################################################################
 1;
