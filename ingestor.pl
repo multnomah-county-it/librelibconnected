@@ -648,7 +648,7 @@ sub create_data_structure {
   my $existing = 0;
   if ( $mode eq 'overlay' ) {
     $new_student{'key'} = $key;
-    $existing = &get_patron($token, $student->{'barcode'});
+    $existing = &get_patron($token, $client->{'id'} . $student->{'barcode'});
   }
 
   foreach my $field (sort keys %{$client->{'fields'}}) {
@@ -667,7 +667,8 @@ sub create_data_structure {
     # Transform fields as needed
     $value = &transform_field($field, $value, $client, $student, $existing);
 
-    # Execute validations for fields not in the incoming data
+    # Execute validations for fields not in the incoming data. (Those were
+    # validated earlier.)
     if ( ! &in_array(\@district_schema, $field) ) {
       $value = &validate_field($field, $value, $client);
     }
@@ -805,7 +806,8 @@ sub validate_field {
   my $field = shift;
   my $value = shift;
   my $client = shift;
-  my $truncate_flag = 1 ? shift : 0;
+  my $truncate_flag = shift;
+  $truncate_flag = 1 ? defined($truncate_flag) : 0;
 
   # Check for empty fields and return 'null' if found;
   return 'null' unless $value;
@@ -910,7 +912,6 @@ sub transform_barcode {
   my $existing = shift;
 
   if ( ref $existing eq ref {} && defined($existing->{'barcode'}) && $existing->{'barcode'} =~ /^\d{14}$/ ) {
-    $student->{'alternateID'} = $value;
     $value = $existing->{'barcode'};
   } else {
     $value = $client->{'id'} . $value;
@@ -918,6 +919,22 @@ sub transform_barcode {
 
   return $value;
 }
+
+###############################################################################
+# Transform alternateID
+
+sub transform_alternateID {
+  my $value = shift;
+  my $client = shift;
+  my $student = shift;
+  my $existing = shift;
+
+  if ( ref $existing eq ref {} && defined($existing->{'barcode'}) && $existing->{'barcode'} =~ /^\d{14}$/ ) {
+    $value = $client->{'id'} . $student->{'barcode'};
+  }
+  
+  return $value;
+}  
 
 ###############################################################################
 # Reformats the date of birth. Accepts dates in two formats:
@@ -1191,6 +1208,7 @@ sub connect_database {
 # Get existing record values for all supported fields
 
 sub get_patron {
+  my $token = shift;
   my $barcode = shift;
 
   my %patron = ();
