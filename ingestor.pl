@@ -501,7 +501,6 @@ sub create_student {
 
   # Put student data into the form expected by ILSWS.
   my $new_student = &create_data_structure($token, $student, $client);
-  print Dumper($new_student);
 
   # Convert the data structure into JSON
   my $student_json = $json->pretty->encode($new_student);
@@ -566,7 +565,6 @@ sub update_student {
 
   # Put student data into the form expected by ILSWS.
   my $new_student = &create_data_structure($token, $student, $client, $key);
-  print Dumper($new_student);
 
   # Convert the data structure into JSON
   my $student_json = $json->pretty->encode($new_student);
@@ -932,7 +930,7 @@ sub transform_alternateID {
   if ( ref $existing eq ref {} && defined($existing->{'barcode'}) && $existing->{'barcode'} =~ /^\d{14}$/ ) {
     $value = $client->{'id'} . $student->{'barcode'};
   }
-  
+
   return $value;
 }  
 
