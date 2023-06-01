@@ -653,12 +653,12 @@ sub create_data_structure {
     my $value = defined($student->{$field}) ? $student->{$field} : '';
 
     # Set default values 
-    if ( $client->{'fields'}->{$field}->{$mode . '_default'} ) {
-      $value = $client->{'fields'}->{$field}->{$mode . '_default'} unless $existing->{$field};
+    if ( defined($client->{'fields'}->{$field}->{$mode . '_default'}) ) {
+      $value = $client->{'fields'}->{$field}->{$mode . '_default'} unless length $existing->{$field};
     }
 
     # Set fixed values for new records and overlays
-    if ( $client->{'fields'}->{$field}->{$mode . '_value'} ) {
+    if ( defined($client->{'fields'}->{$field}->{$mode . '_value'}) ) {
         $value = $client->{'fields'}->{$field}->{$mode . '_value'};
     }
 
