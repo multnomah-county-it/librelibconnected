@@ -1129,7 +1129,7 @@ sub check_for_changes {
   my $client = shift;
   my $dbh = shift;
 
-  my $barcode = $student->{'barcode'};
+  my $barcode = $client->{'id'} . $student->{'barcode'};
 
   # Default is to assume that the data has changed
   my $retval = 1;
