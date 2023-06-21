@@ -681,24 +681,24 @@ sub create_data_structure {
 
     switch($client->{'fields'}->{$field}->{'type'}) {
       case 'string' {
-        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+        if ( $mode eq 'new' || ($client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field}) ) {
           $new_student{'fields'}{$field} = $student->{$field};
         }
       }
       case 'resource' {
-        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+        if ( $mode eq 'new' || ($client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field}) ) {
           $new_student{'fields'}{$field}{'resource'} = "/policy/$resource{$field}";
           $new_student{'fields'}{$field}{'key'} = $student->{$field};
           }
       }
       case 'category' {
-        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+        if ( $mode eq 'new' || ($client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field}) ) {
           $new_student{'fields'}{$field}{'resource'} = "/policy/$resource{$field}";
           $new_student{'fields'}{$field}{'key'} = $student->{$field};
         }
       }
       case 'address' {
-        if ( $mode eq 'new' || $client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field} ) {
+        if ( $mode eq 'new' || ($client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field}) ) {
           my %address = ();
           $address{'resource'} = '/user/patron/address1';
           $address{'fields'}{'code'}{'key'} = $resource{$field};
