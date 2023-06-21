@@ -296,7 +296,7 @@ clients:
         overlay: false
         validate: s:60
       street:
-        type: list
+        type: address
         overlay: true
         validate: s:128
         transform: c:transform_street  # Transforms to match USPS address formatting guidelines
