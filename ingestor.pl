@@ -189,6 +189,11 @@ while ( my $student = $parser->fetch ) {
 
     # Validate data in each field as configured in config.yaml
     my $value = &validate_field($field, $student->{$field}, $client, 1);
+    if ( ! $value ) {
+      # Try to truncate and then validate again
+      $value = &truncate_field($field, $student->{$field}, $client);
+      $value = &validate_field($field, $value, $client);
+    }
 
     # Log any errors, except with email, because that field is not required.
     if ( ! $value ) {
@@ -795,6 +800,25 @@ sub print_line {
 }
 
 ###############################################################################
+# Gets max length for string and truncates to fit
+
+sub truncate_field {
+  my $field = shift;
+  my $value = shift;
+  my $client = shift;
+  
+  my $rule = $client->{'fields'}->{$field}->{'validate'};
+  my $type = substr($rule, 0, 1);
+  my $data = substr($rule, 2);
+
+  if ( $type eq 's' ) {
+    $value = DataHandler::truncate_string($value, $data);
+  }
+
+  return $value;
+}
+    
+###############################################################################
 # Checks if there is a function to validate a particular field. If there is
 # one, it runs it, passing in the value, while will either be returned if it is
 # valid or returned as null if it is not (in which case an error may be 
@@ -804,8 +828,6 @@ sub validate_field {
   my $field = shift;
   my $value = shift;
   my $client = shift;
-  my $truncate_flag = shift;
-  $truncate_flag = 1 ? defined($truncate_flag) : 0;
 
   # Check for empty fields and return 'null' if found;
   return 'null' unless $value;
@@ -828,13 +850,6 @@ sub validate_field {
     }
 
   } elsif ( $rule ) {
-
-    # If the truncate flag is set, truncate string fields at word boundaries
-    if ( $truncate_flag == 1 ) {
-      if ( $type eq 's' ) {
-          $value = DataHandler::truncate_string($value, $data);
-      }
-    }
 
     if ( ! DataHandler::validate($value, $rule) ) {
         $value = '';
