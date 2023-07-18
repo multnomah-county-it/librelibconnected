@@ -302,10 +302,19 @@ sub truncate_string {
   my $value = shift;
   my $length = shift;
 
-  my @words = split /\s+/, $value;
-  while ( length($value) > $length ) {
-    pop @words;
-    $value = join(' ', @words);
+  if ( $value =~ /\s/ ) {
+    my @parts = split /\s+/, $value;
+    while (length($value) > $length) {
+      pop @parts;
+      $value = join ' ', @parts;
+    }
+  } else {
+    my @parts = split //, $value;
+    while (scalar(@parts) > $length - 1) {
+      pop @parts;
+    }
+    $value  = join '', @parts;
+    $value .= '$';
   }
 
   return $value;
