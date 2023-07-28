@@ -639,6 +639,7 @@ sub create_data_structure {
     'cityState'  => 'CITY/STATE',
     'zipCode'    => 'ZIP',
     'email'      => 'EMAIL',
+    'birthDate'  => 'birthDate'
     );
 
   # Determine the mode
@@ -655,6 +656,7 @@ sub create_data_structure {
   }
 
   foreach my $field (sort keys %{$client->{'fields'}}) {
+
     my $value = defined($student->{$field}) ? $student->{$field} : '';
 
     # Set default values 
@@ -686,6 +688,11 @@ sub create_data_structure {
 
     switch($client->{'fields'}->{$field}->{'type'}) {
       case 'string' {
+        if ( $mode eq 'new' || ($client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field}) ) {
+          $new_student{'fields'}{$field} = $student->{$field};
+        }
+      }
+      case 'date' {
         if ( $mode eq 'new' || ($client->{'fields'}->{$field}->{'overlay'} eq 'true' && $student->{$field}) ) {
           $new_student{'fields'}{$field} = $student->{$field};
         }
