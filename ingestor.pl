@@ -726,10 +726,6 @@ sub create_data_structure {
 }
 
 ###############################################################################
-# Calculate if age over thirteen from birthday.
-
-
-###############################################################################
 # Log errors and exit
 
 sub error_handler {
