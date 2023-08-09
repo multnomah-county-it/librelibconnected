@@ -449,14 +449,19 @@ sub search {
           # information. Put the student ID in the the ID field along with the 
           # matching record ID, so the CSV can be storted appropriately. Add 
           # name and streets from matching records.
-          my $message = qq|"Ambiguous","DOB and Street",|;
-          $message   .= qq|"$student->{'barcode'}, $results[$i]{'key'}",|;
-          $message   .= qq|"$results[$i]{'fields'}->{'firstName'}",|;
-          if ( $results[$i]{'fields'}->{'middleName'} ) {
-            $message   .= qq|"$results[$i]{'fields'}->{'middleName'}",|;
+          my @message = ();
+          push(@message, qq|"Ambiguous","DOB and Street"|);
+          push(@message, qq|"$student->{'barcode'}, $results[$i]{'key'}"|);
+          if ( $results[$i]{'fields'}->{'firstName'} ) {
+            push(@message, qq|"$results[$i]{'fields'}->{'firstName'}"|);
           }
-          $message   .= qq|"$results[$i]{'fields'}->{'lastName'}",|;
-          $csv->info($message);
+          if ( $results[$i]{'fields'}->{'middleName'} ) {
+            push(@message, qq|"$results[$i]{'fields'}->{'middleName'}"|);
+          }
+          if ( $results[$i]{'fields'}->{'lastName'} ) {
+            push(@message, qq|"$results[$i]{'fields'}->{'lastName'}"|);
+          }
+          $csv->info(join(',', @message));
           $log->debug(Dumper($results[$i]));
         }
       }
