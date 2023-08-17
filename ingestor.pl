@@ -1013,7 +1013,7 @@ sub transform_email {
         }
       }
     }
-    if ( $match ) {
+    if ( ! $match ) {
       $value = $existing->{'email'};
     }
   }
