@@ -790,6 +790,7 @@ sub check_schema {
 
 sub print_line {
   my $student = shift;
+  no warnings 'uninitialized';
 
   # Print out the student fields in a standard order, regardless
   # of the order they were entered in the hash.
@@ -1001,7 +1002,7 @@ sub transform_email {
   my $student = shift;
   my $existing = shift;
 
-  if ( ref $existing eq ref {} ) {
+  if ( $value && ref $existing eq ref {} ) {
     my $match = 0;
     foreach my $i (0 .. $#{$yaml->[0]->{'clients'}}) {
       my $pattern = $yaml->[0]->{'clients'}->[$i]->{'email_pattern'};
