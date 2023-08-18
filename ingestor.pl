@@ -802,7 +802,11 @@ sub print_line {
   $string   .= qq|"$student->{'state'}",|;
   $string   .= qq|"$student->{'zipCode'}",|;
   $string   .= qq|"$student->{'birthDate'}",|;
-  $string   .= qq|"$student->{'email'}"|;
+  if ( $student->{'email'} ) {
+    $string .= qq|"$student->{'email'}"|;
+  } else {
+    $string .= qq|""|;
+  }
 
   return $string;
 }
