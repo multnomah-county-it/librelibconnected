@@ -23,17 +23,13 @@ unless ( $hostname && $port && $database && $username && $password && $max_check
 
 # Connect to the new database as the new user
 my $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
-my $dbh = DBI->connect($dsn, $username, $password);
+my $dbh = DBI->connect($dsn, $username, $password, { PrintError => 0, RaiseError => 0 }) or die "Can't connect to the database: $DBI::errstr\n";
 
-if ( $dbh ) {
-    # Delete old checksums
-    my $sql = qq|DELETE FROM checksums WHERE WHERE DATE_SUB(CURDATE(), INTERVAL $max_checksum_age DAY) > date_added|;
-    my $sth = $dbh->prepare($sql);
-    $sth->execute() or die "Could not delete from checksums: $DBI::errstr";
+# Delete old checksums
+my $sql = qq|DELETE FROM checksums WHERE DATE_SUB(CURDATE(), INTERVAL $max_checksum_age DAY) > date_added|;
+my $sth = $dbh->prepare($sql);
+$sth->execute() or die "Could not delete from checksums: $DBI::errstr\n";
 
-    # Finish up and disconnect
-    $sth->finish();
-    $dbh->disconnect();
-} else {
-    die "Could not connect to database $database";
-}
+# Finish up and disconnect
+$sth->finish();
+$dbh->disconnect();
