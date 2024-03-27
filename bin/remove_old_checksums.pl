@@ -27,9 +27,9 @@ my $dbh = DBI->connect($dsn, $username, $password);
 
 if ( $dbh ) {
     # Delete old checksums
-    my $sql = qq|DELETE FROM checksums WHERE date_added > (CURDATE() + $max_checksum_age)|;
+    my $sql = qq|DELETE FROM checksums WHERE WHERE DATE_SUB(CURDATE(), INTERVAL $max_checksum_age DAY) > date_added|;
     my $sth = $dbh->prepare($sql);
-    $sth->execute() or die "Could not delete from checksums";
+    $sth->execute() or die "Could not delete from checksums: $DBI::errstr";
 
     # Finish up and disconnect
     $sth->finish();
