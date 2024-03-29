@@ -1154,6 +1154,7 @@ sub check_for_changes {
   my $dbh = shift;
 
   my $barcode = $client->{'id'} . $student->{'barcode'};
+  $barcode =~ s/^0+(?=[0-9])//;
 
   # Default is to assume that the data has changed
   my $retval = 1;
@@ -1161,7 +1162,7 @@ sub check_for_changes {
   # Create an MD5 digest from the incoming student data
   my $checksum = &digest($student);
 
-  my $sql = qq|SELECT chksum FROM checksums WHERE student_id = '$barcode'|;
+  my $sql = qq|SELECT chksum FROM checksums WHERE student_id = $barcode|;
   my $sth = $dbh->prepare($sql);
   $sth->execute() or &error_handler('Could not search checksums: ' . $DBI::errstr);
 
@@ -1183,7 +1184,7 @@ sub check_for_changes {
     } else {
 
       # The incoming data has changed, so update the checksum
-      $sql = qq|UPDATE checksums SET chksum = '$checksum' WHERE student_id = '$barcode'|;
+      $sql = qq|UPDATE checksums SET chksum = '$checksum' WHERE student_id = $barcode|;
       $sth = $dbh->prepare($sql);
       $sth->execute() or &error_handler('Could not update checksums: ' . $DBI::errstr);
 
@@ -1193,7 +1194,7 @@ sub check_for_changes {
   } else {
 
     # We did not find a checksum record for this student, so we should add one
-    $sql = qq|INSERT INTO checksums (student_id, chksum, date_added) VALUES ('$barcode', '$checksum', CURDATE())|;
+    $sql = qq|INSERT INTO checksums (student_id, chksum, date_added) VALUES ($barcode, '$checksum', CURDATE())|;
     $sth = $dbh->prepare($sql);
     $sth->execute() or &error_handler('Could not add record to checksums: ' . $DBI::errstr);
 
