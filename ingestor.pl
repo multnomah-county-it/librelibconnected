@@ -1163,7 +1163,7 @@ sub check_for_changes {
 
   my $sql = qq|SELECT chksum FROM checksums WHERE student_id = '$barcode'|;
   my $sth = $dbh->prepare($sql);
-  $sth->execute() or &error_handler("Could not search checksums: $dbh->errstr()");
+  $sth->execute() or &error_handler('Could not search checksums: ' . $DBI::errstr);
 
   my $result = $sth->fetchrow_hashref;
 
@@ -1185,7 +1185,7 @@ sub check_for_changes {
       # The incoming data has changed, so update the checksum
       $sql = qq|UPDATE checksums SET chksum = '$checksum' WHERE student_id = '$barcode'|;
       $sth = $dbh->prepare($sql);
-      $sth->execute() or &error_handler("Could not update checksums: $dbh->errstr()");
+      $sth->execute() or &error_handler('Could not update checksums: ' . $DBI::errstr);
 
       &logger('debug', "Student data changed, updating checksum database");
     }
@@ -1195,7 +1195,7 @@ sub check_for_changes {
     # We did not find a checksum record for this student, so we should add one
     $sql = qq|INSERT INTO checksums (student_id, chksum, date_added) VALUES ('$barcode', '$checksum', CURDATE())|;
     $sth = $dbh->prepare($sql);
-    $sth->execute() or &error_handler("Could not add record to checksums: $dbh->errstr()");
+    $sth->execute() or &error_handler('Could not add record to checksums: ' . $DBI::errstr);
 
     &logger('debug', "Inserted new record in checksum database");
   }
