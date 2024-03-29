@@ -1008,7 +1008,7 @@ sub transform_email {
       my $pattern = $yaml->[0]->{'clients'}->[$i]->{'email_pattern'};
       if ( $existing->{'email'} ) {
         my ($username, $domain) = split /\@/, $existing->{'email'};
-        if ( $pattern eq $domain ) {
+        if ( $domain && $pattern eq $domain ) {
           $match = 1;
           last;
         }
