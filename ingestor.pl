@@ -1060,7 +1060,7 @@ sub transform_profile {
 
       if (($day1 == 29) && ($month1 == 2) && !leap_year($year2)) { $day1--; };
 
-      if ( (($year2 - $year1) >  17) || ( (($year2 - $year1) == 17) 
+      if ( (($year2 - $year1) >  12) || ( (($year2 - $year1) == 12) 
         && (Delta_Days($year2,$month1,$day1, $year2,$month2,$day2) >= 0) ) ) {
 
         $value = $yaml->[0]->{'adult_profile'};
