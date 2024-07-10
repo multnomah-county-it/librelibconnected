@@ -599,7 +599,7 @@ sub update_student {
       &logger('error', "Failed to update $student->{'barcode'} (line $lineno) on attempt $retries: " . &print_line($student));
       &logger('error', "$ILSWS::code: $ILSWS::error");
     }
-    sleep($retries);
+    sleep($retries * 2);
     $retries++;
   }
 
