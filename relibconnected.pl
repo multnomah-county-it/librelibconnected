@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# ReLibConectEd
+# ReLibConectEd Software
 #
 # John Houser
 # john.houser@multco.us
