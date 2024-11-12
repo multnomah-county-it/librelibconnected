@@ -280,12 +280,6 @@ try {
   &error_handler("Could not email logs: $_");
 };
 
-# Temporary for diagnosis
-if ( $client->{'namespace'} eq 'pps' && $client->{'id'} eq '01' ) {
-  copy($mail_log, '/opt/relibconnected/sample_data/pps01-mail.log');
-  copy($csv_file, '/opt/relibconnected/sample_data/pps01-ingest.csv');
-}
-
 # Delete the mail log and the CSV file
 unlink $mail_log || &error_handler("Could not delete mail.log: $!");
 unlink $csv_file || &error_handler("Could not delete csv_file: $!");
