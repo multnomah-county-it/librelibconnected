@@ -19,6 +19,7 @@ use YAML::Tiny;
 use URI;
 use JSON;
 use Cwd;
+use Data::Dumper qw(Dumper);
 
 # Define global constants
 our $BASE_PATH;
@@ -79,9 +80,18 @@ sub import {
 sub ILSWS_connect {
 
   # Define the URL for ILSWS
-  my $action = 'rest/security/loginUser';
-  my $params = "clientID=$yaml->[0]->{'ilsws'}->{'client_id'}&login=$yaml->[0]->{'ilsws'}->{'username'}&password=$yaml->[0]->{'ilsws'}->{'password'}";
-  my $URL = "$base_URL/$action?$params";
+  my $url = "$base_URL/user/staff/login";
+  my $query_json = qq({"barcode":") . $yaml->[0]->{'ilsws'}->{'username'} . qq(","password":") . $yaml->[0]->{'ilsws'}->{'password'} . qq("});
+  my $req_num = 1 + int rand(1000000000);
+
+  # Define the request headers
+  my $req = HTTP::Request->new('POST', $url);
+  $req->header( 'Content-Type' => 'application/json' ); 
+  $req->header( 'Accept' => 'application/json' );
+  $req->header( 'SD-Originating-App-Id' => $yaml->[0]->{'ilsws'}->{'app_id'} );
+  $req->header( 'SD-Response-Tracker' => $req_num );
+  $req->header( 'x-sirs-clientId' => $yaml->[0]->{'ilsws'}->{'client_id'} );
+  $req->content( $query_json );
 
   # Create user agent object
   my $timeout = defined $yaml->[0]->{'ilsws'}->{'timeout'} ? $yaml->[0]->{'ilsws'}->{'timeout'} : $DEFAULT_TIMEOUT;
@@ -91,15 +101,19 @@ sub ILSWS_connect {
     protocals_forbidden => ['http'],
     protocols_allowed => ['https']
     );
-  
+
   # Post the request
-  my $res = $ua->get($URL);
+  my $res = $ua->request($req);
+
+  # Set the response code so other functions can check it as needed
+  $code = $res->code;
 
   my $token = '';
   if ( $res->is_success ) {
 
-    # Load response XML into hash
-    my $res_hash = XMLin($res->decoded_content, ForceArray => 1, KeyAttr => 'LoginUserResponse');
+    # Load response JSON into hash
+    my $json = JSON->new->allow_nonref;
+    my $res_hash = $json->decode($res->decoded_content);
 
     # Check if we got a token
     if ( defined $res_hash->{'sessionToken'} ) {
