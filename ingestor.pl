@@ -996,7 +996,7 @@ sub transform_email {
   my $student = shift;
   my $existing = shift;
 
-  if ( $value && $existing && $existing->{'email'} ) {
+  if ( $value && $existing && ref $existing eq ref && $existing->{'email'} ) {
     my $match = 0;
     foreach my $i (0 .. $#{$yaml->[0]->{'clients'}}) {
       my $pattern = $yaml->[0]->{'clients'}->[$i]->{'email_pattern'};
