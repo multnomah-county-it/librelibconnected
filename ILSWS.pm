@@ -27,7 +27,8 @@ our @EXPORT_OK = qw(
     send_post
 );
 # 'import' is already handled by Exporter qw(import) and doesn't need to be in @EXPORT.
-# If you explicitly want to allow `use ILSWS qw(import);` then it would be in @EXPORT_OK.
+# Note: The 'import' function in this module is a custom subroutine (see line 76) used for configuration loading,
+# not Exporter's import. It is not intended to be exported, so it is not included in @EXPORT or @EXPORT_OK.
 
 # Modules required
 use LWP::UserAgent;
