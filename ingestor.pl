@@ -611,7 +611,7 @@ sub create_student {
 
     if ($create_success) {
         # We created a patron. Log the event.
-        $csv_logger->info(qq|"Create",""| . print_line($student));
+        $csv_logger->info(qq|"Create","","| . print_line($student));
         logger('debug', "CREATE: " . ($student->{'lastName'} // 'N/A') . ", " . ($student->{'firstName'} // 'N/A') . " (" . ($student->{'barcode'} // 'N/A') . ") created.");
     } else {
         logger('error', "Persistent failure to create patron " . ($student->{'barcode'} // 'N/A') . " after $max_retries attempts.");
