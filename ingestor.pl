@@ -777,8 +777,6 @@ sub create_data_structure {
             } elsif ($field_type eq 'resource' || $field_type eq 'category') {
                 $new_patron_struct{'fields'}{$field_name}{'resource'} = "/policy/" . ($resource_map{$field_name} // $field_name);
                 $new_patron_struct{'fields'}{$field_name}{'key'} = $current_student_data{$field_name};
-            } else {
-                logger('warn', "Unknown field type '$field_type' for field '$field_name' in configuration. Skipping.");
             }
         }
     }
@@ -802,9 +800,10 @@ sub error_handler {
 # end of the ingest. Separate commands are used to send data to the CSV file.
 sub logger {
     my ($level, $message) = @_;
+    $level = lc($level);
 
     # Log more information to the permanent log for errors/fatal
-    if ($level eq 'error' || $level eq 'fatal') {
+    if ($level eq 'warn' || $level eq 'error' || $level eq 'fatal') {
         # Add the calling package and line number to errors
         my ($package, $filename, $line) = caller(1); # Get caller's context
         $log->$level("$package:${line}: $message");

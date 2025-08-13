@@ -41,7 +41,7 @@ use Data::Dumper; # For debugging output
 
 # --- Module-level Constants ---
 use constant {
-    MODULE_DEBUG_LEVEL            => 2,     # Internal debug level for this module (e.g., 0=off, 1=basic, 2=verbose)
+    MODULE_DEBUG_LEVEL            => 1,     # Internal debug level for this module (e.g., 0=off, 1=basic, 2=verbose)
     DEFAULT_TIMEOUT               => 20,    # Default timeout for HTTP requests in seconds
     DEFAULT_PATRON_SEARCH_ROW     => 1,     # Default starting row for patron search results
     DEFAULT_PATRON_SEARCH_COUNT   => 1000,  # Default maximum number of results for patron search

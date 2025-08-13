@@ -2,8 +2,8 @@
 #
 # ReLibConectEd Software - Secure Ingestor Check
 #
-# Original Author: John Houser
-# Secure Rewrite: Gemini
+# Author: John Houser
+# Copyright Multnomah County 2025
 #
 # This script securely checks for uploaded student data files and starts the
 # ingester process. It is designed to be run from a cron job.
@@ -24,6 +24,8 @@ use File::Spec;
 use Fcntl qw(:DEFAULT :flock); # For file constants and locking
 
 # --- Configuration ---
+$ENV{'PATH'} = '/bin:/usr/bin:/usr/local/bin';
+
 # File paths are defined here.
 my $srv_path  = '/srv/libconnected';
 my $base_path = '/opt/librelibconnected';
@@ -34,12 +36,10 @@ my $lock_file   = File::Spec->catfile( $base_path, 'run', 'ingestor.lock' );
 my $ingestor    = File::Spec->catfile( $base_path, 'ingestor.pl' );
 # --- End Configuration ---
 
-
 ###############################################################################
 # Do not edit below this point
 ###############################################################################
 
-#
 # Section 1: Implement a secure, atomic locking mechanism.
 #
 # We use sysopen() with O_CREAT and O_EXCL. This is an atomic operation, meaning
@@ -79,7 +79,16 @@ find(
         wanted => sub {
             # Stop searching if we've already found and processed a file.
             return if $found_file;
+            
+            # Call original wanted subroutine for the item.
+            # No need for prune logic here anymore.
             &wanted;
+        },
+        preprocess => sub {
+            # Return a list of only the non-hidden directory entries.
+            # This prevents File::Find from ever trying to access a
+            # hidden file or directory we might not have permissions for.
+            return grep { !/^\./ } @_;
         },
         # Don't follow symbolic links for security reasons.
         no_chdir => 1,
