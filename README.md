@@ -8,9 +8,9 @@ This application monitors for school district uploaded CSV files in
 `/srv/libconnected`, validates and reformats the data as needed, and updates or 
 creates records in SirsiDynix Symphony. Record searches, updates, and creates 
 are accomplished via the SirsiDynix Web Services API (ILSWS). A local MySQL 
-database is utilized to store checksums for the student entries. The checksums
+database is utilized to store digests for the student entries. The digests
 are used to determine if student data has changed between loads. If it hasn't,
-no update is performed. If no checksum is found, a checksum is added to the 
+no update is performed. If no digest is found, a digest is added to the 
 MySQL database and the student record is added to the Symphony system.
 
 # Before Installation
@@ -28,7 +28,7 @@ sudo apt install PACKAGE_NAME
 
 After the mysql-server installation, secure the mysql installation and set
 the mysql root password with the following command. Make a note of the root
-password! You'll need it to configure the checksum database.
+password! You'll need it to configure the digest database.
 ```
 sudo mysql_secure_installation
 ```
@@ -52,6 +52,7 @@ sudo cpan install MODULE_NAME
 - LWP::Protocol::https
 - LWP::UserAgent
 - Parse::CSV
+- Readonly
 - Switch
 - XML::Simple
 - Unicode::Normalize
@@ -90,7 +91,7 @@ ingest and deleted automatically afterward. They are shown here for reference.
 needed. Be sure to complete this step before moving on to steps 3 and 4.
 
 3. Run `create_checksum_db.pl CONFIG_FILE MYSQL_ROOT_PASSWORD` to create the 
-MySQL database used for checksums. For example:
+MySQL database used for digests. For example:
 ```
 bin/create_checksum_db.pl config.yaml 'thisismypassword'
 ```
@@ -167,7 +168,7 @@ them in `ingestor.pl`.
 
 12. Create two cron jobs for the user which owns the application directory. The
 first runs relibconnected every 5 minutes to check for uploaded data files. The
-second removes expired checksum records from the mysql database based on the
+second removes expired digest records from the mysql database based on the
 `max_checksum_age` set in `config.yaml`.
 For example:
 ```
@@ -177,7 +178,7 @@ For example:
 
 13. One other utility script is included in the bin directory. Run it with the
 syntax, `randomize_checksum_ages.pl CONFIG_FILE`. Use this script to spread out the expiration
-dates of checksum records so that the software doesn't attempt to update all
+dates of digest records so that the software doesn't attempt to update all
 the records from a given original load on the same date. The script will 
 randomly adjust the `date_added` field in each record forward or backward by up
 to seven days. For example:

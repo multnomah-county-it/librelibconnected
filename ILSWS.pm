@@ -508,9 +508,9 @@ sub send_get {
     # Define the user agent instance
     my $timeout = $yaml_config->[0]->{'ilsws'}->{'timeout'} // DEFAULT_TIMEOUT;
     my $ua = LWP::UserAgent->new(
-        timeout           => $timeout,
-        ssl_opts          => { verify_hostname => 1 },
-        protocols_allowed => ['https'],
+        timeout             => $timeout,
+        ssl_opts            => { verify_hostname => 1 },
+        protocols_allowed   => ['https'],
         protocols_forbidden => ['http'],
     );
 
@@ -590,9 +590,9 @@ sub send_post {
     # Define the user agent instance
     my $timeout = $yaml_config->[0]->{'ilsws'}->{'timeout'} // DEFAULT_TIMEOUT;
     my $ua = LWP::UserAgent->new(
-        timeout           => $timeout,
-        ssl_opts          => { verify_hostname => 1 },
-        protocols_allowed => ['https'],
+        timeout             => $timeout,
+        ssl_opts            => { verify_hostname => 1 },
+        protocols_allowed   => ['https'],
         protocols_forbidden => ['http'],
     );
 
