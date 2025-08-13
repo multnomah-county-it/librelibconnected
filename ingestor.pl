@@ -27,7 +27,7 @@ use Try::Tiny;
 use Digest::MD5 qw(md5_hex);
 use DBI;
 use DBD::mysql;
-use JSON; # Add JSON module, as it's used in create_student/update_student
+use JSON; # Add JSON module, as it's used in create_student and update_student (patron creation and update operations)
 
 # Load local modules
 use AddressFormat; # Assumed to be in @INC or same directory
