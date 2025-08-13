@@ -770,7 +770,15 @@ sub create_data_structure {
                         code => {
                             resource => '/policy/patronAddress1',
                             key      => $resource_map{$field_name} // die "Unknown address resource map for $field_name",
-                        },
+                            key      => do {
+                                my $mapped_key = $resource_map{$field_name};
+                                unless (defined $mapped_key) {
+                                    my $logger = get_logger();
+                                    $logger->error("Failed to map address resource for field '$field_name' while building data structure in mode '$mode'. Current student data: " . Dumper(\%current_student_data));
+                                    die "Unknown address resource map for field '$field_name' in mode '$mode'";
+                                }
+                                $mapped_key;
+                            },
                         data => $current_student_data{$field_name},
                     },
                 );
