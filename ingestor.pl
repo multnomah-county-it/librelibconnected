@@ -95,7 +95,8 @@ BEGIN {
 
 # Do this after the BEGIN so that ILSWS gets the base path from the environment
 # Assumes ILSWS.pm is in a path specified by $ENV{'ILSWS_BASE_PATH'} or @INC
-use ILSWS; # Removed explicit path as it's handled by $ENV{'ILSWS_BASE_PATH'}
+# Assumes ILSWS.pm is located via the following fallback mechanism: first by $ENV{'ILSWS_BASE_PATH'}, then by a parameter, and finally by the current working directory or @INC, as handled in ILSWS.pm.
+use ILSWS; # Module path is resolved using environment variable, parameter, or current directory as fallbacks (see ILSWS.pm for details)
 
 # --- Main Script Logic ---
 my $exit_status = EXIT_FAILURE; # Default to failure
