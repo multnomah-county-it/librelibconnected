@@ -416,7 +416,7 @@ sub process_student {
         if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
             logger('error', "ILSWS::patron_search (EMAIL) failed for '$student->{'email'}': " . ($ILSWS::error // $@));
         } elsif (defined $existing_email_result && $existing_email_result->{'totalResults'} == 1 && $existing_email_result->{'result'}->[0]->{'key'} > 0) {
-            if (same_names($student, $existing_email_result)) {
+            if (same_names($student, $existing_email_result->{'result'}->[0])) {
                 $email_cnt++;
                 update_student($token, $client, $student, $existing_email_result->{'result'}->[0]->{'key'}, 'Email');
                 $update_cnt++;
