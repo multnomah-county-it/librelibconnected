@@ -570,7 +570,8 @@ sub trim {
     my $string = shift;
     if ($string) {
         $string =~ s/^\s+|\s+$//g;
-    }
+    $string = '' unless defined $string;
+    $string =~ s/^\s+|\s+$//g;
     return $string;
 }
 
