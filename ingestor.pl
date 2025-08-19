@@ -269,12 +269,17 @@ while (my $student_record = $parser->fetch) {
 
     if ($errors_in_record > 0) {
         # We got errors when validating this student's data, so log and skip
-        logger('error', "Skipping " . ($student_record->{'lastName'} // 'N/A') . ", " . ($student_record->{'firstName'} // 'N/A') . " (" . ($student_record->{'barcode'} // 'N/A') . " at line $lineno) due to data error(s).");
+        logger('error', "Skipping " 
+            . ($student_record->{'lastName'} // 'N/A') 
+            . ", " 
+            . ($student_record->{'firstName'} // 'N/A') 
+            . " (" . ($student_record->{'barcode'} // 'N/A') 
+            . " at line $lineno) due to data error(s).");
     } else {
         # Check the checksum database for changes to the data or for new data
         # and process the student record only if necessary
         if (check_for_changes($student_record, $client_config, $dbh)) {
-            process_student($ilsws_token, $client_config, $student_record);
+            process_student($dbh, $ilsws_token, $client_config, $student_record);
         } else {
             $checksum_cnt++;
         }
@@ -382,7 +387,7 @@ sub _validate_secure_file_access {
 # update (overlay) a record, create a new record, or log the data only due to
 # multiple ambiguous matches.
 sub process_student {
-    my ($token, $client, $student) = @_;
+    my ($dbh, $token, $client, $student) = @_;
 
     my $patron_id = $client->{'id'} . $student->{'barcode'};
 
@@ -394,7 +399,7 @@ sub process_student {
     };
     if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
         logger('error', "ILSWS::patron_alt_id_search failed for '$patron_id': " . ($ILSWS::error // $@));
-    } elsif (defined $existing_alt_id_result && $existing_alt_id_result->{'totalResults'} == 1 && $existing_alt_id_result->{'result'}->[0]->{'key'}) {
+    } elsif (defined $existing_alt_id_result && $existing_alt_id_result->{'totalResults'} == 1 && $existing_alt_id_result->{'result'}->[0]->{'key'} > 0) {
         $alt_id_cnt++;
         update_student($token, $client, $student, $existing_alt_id_result->{'result'}->[0]->{'key'}, 'Alt ID');
         $update_cnt++;
@@ -403,18 +408,20 @@ sub process_student {
 
     # 2. Search for the student via email address (if provided)
     if ($student->{'email'} && $student->{'email'} ne 'null') {
-        %options = ( ct => 2, includeFields => 'barcode' ); # Limit to 2 to detect ambiguity
+        %options = ( ct => 2, includeFields => 'firstName,middleName,lastName' ); # Limit to 2 to detect ambiguity
         my $existing_email_result;
         eval {
             $existing_email_result = ILSWS::patron_search($token, 'EMAIL', $student->{'email'}, \%options);
         };
         if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
             logger('error', "ILSWS::patron_search (EMAIL) failed for '$student->{'email'}': " . ($ILSWS::error // $@));
-        } elsif (defined $existing_email_result && $existing_email_result->{'totalResults'} == 1 && $existing_email_result->{'result'}->[0]->{'key'}) {
-            $email_cnt++;
-            update_student($token, $client, $student, $existing_email_result->{'result'}->[0]->{'key'}, 'Email');
-            $update_cnt++;
-            return 1;
+        } elsif (defined $existing_email_result && $existing_email_result->{'totalResults'} == 1 && $existing_email_result->{'result'}->[0]->{'key'} > 0) {
+            if (same_names($student, $existing_email_result->{'result'}->[0])) {
+                $email_cnt++;
+                update_student($token, $client, $student, $existing_email_result->{'result'}->[0]->{'key'}, 'Email');
+                $update_cnt++;
+                return 1;
+            }
         }
     }
 
@@ -426,7 +433,7 @@ sub process_student {
     };
     if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
         logger('error', "ILSWS::patron_barcode_search failed for '$patron_id': " . ($ILSWS::error // $@));
-    } elsif (defined $existing_barcode_result && $existing_barcode_result->{'totalResults'} == 1 && $existing_barcode_result->{'result'}->[0]->{'key'}) {
+    } elsif (defined $existing_barcode_result && $existing_barcode_result->{'totalResults'} == 1 && $existing_barcode_result->{'result'}->[0]->{'key'} > 0) {
         $id_cnt++;
         update_student($token, $client, $student, $existing_barcode_result->{'result'}->[0]->{'key'}, 'ID');
         $update_cnt++;
@@ -434,21 +441,35 @@ sub process_student {
     }
 
     # 4. Search by DOB and street
-    my $dob_street_matches = search_by_dob_and_street($token, $client, $student);
+    my $dob_street_matches = search_by_name_dob_and_street($token, $client, $student);
 
-    if (scalar @{$dob_street_matches} == 1) {
-        # Looks like this student may have moved
-        if (defined $dob_street_matches->[0]->{'key'}) {
+    if (defined $dob_street_matches && $dob_street_matches->{'totalResults'} == 1 && $dob_street_matches->{'result'}->[0]->{'key'} > 0) {
+        if (same_names($student, $dob_street_matches)) {
             $dob_street_cnt++;
-            update_student($token, $client, $student, $dob_street_matches->[0]->{'key'}, 'DOB and Street');
+            update_student($token, $client, $student, $dob_street_matches->{'result'}->[0]->{'key'}, 'DOB and Street');
             $update_cnt++;
+        } else {
+            create_student($token, $client, $student);
+            $create_cnt++;
         }
-    } elsif (scalar @{$dob_street_matches} > 1) {
+    } elsif ($dob_street_matches->{'totalResults'} > 1) {
         # We got multiple matches, so reject the search results as ambiguous
         # and report the new student data in logs.
         logger('debug', qq|"AMBIGUOUS:","DOB and Street",| . print_line($student));
         $csv_logger->info(qq|"Ambiguous","DOB and Street",| . print_line($student));
         $ambiguous_cnt++;
+        foreach my $match_rec (@{$dob_street_matches->{'result'}}) {
+            my @message_parts = ();
+            push(@message_parts, qq|"Ambiguous Match Detail","DOB and Street"|);
+            push(@message_parts, qq|"$student->{'barcode'}, $match_rec->{'key'}"|);
+            # Add other fields like firstName, lastName, dob, street, etc.
+            push(@message_parts, qq|"$student->{'firstName'}, $match_rec->{'firstName'}"|);
+            push(@message_parts, qq|"$student->{'lastName'}, $match_rec->{'lastName'}"|);
+            push(@message_parts, qq|"$student->{'dob'}, $match_rec->{'dob'}"|);
+            push(@message_parts, qq|"$student->{'street'}, $match_rec->{'street'}"|);
+            $csv_logger->info(join(',', @message_parts));
+            logger('debug', "Ambiguous match details: " . Dumper($match_rec));
+        }
     } else {
         # All efforts to match this student failed, so create new record for them
         create_student($token, $client, $student);
@@ -459,15 +480,15 @@ sub process_student {
 }
 
 # Search ILSWS on DOB and street to match existing student
-sub search_by_dob_and_street {
+sub search_by_name_dob_and_street {
     my ($token, $client, $student) = @_;
-
-    my @results = ();
+    
+    my %results = ( 'totalResults' => 0 );
 
     my ($year, $mon, $day) = split /\-/, transform_birthDate($student->{'birthDate'}, $client, $student);
     my %options = (
         ct            => 20,
-        includeFields => 'barcode,firstName,middleName,lastName'
+        includeFields => 'firstName,middleName,lastName'
     );
 
     my $bydob_result;
@@ -496,74 +517,62 @@ sub search_by_dob_and_street {
         if (defined $bystreet_result && defined($bystreet_result->{'totalResults'}) && $bystreet_result->{'totalResults'} >= 1) {
             # Compare the two result sets to see if we can find the same student
             # in both the DOB and street result sets
-            @results = compare_results($bydob_result->{'result'}, $bystreet_result->{'result'});
 
-            if (scalar @results >= 1) { # If there are any results (even one for update, or multiple for ambiguity)
-                # Now report the possible matches
-                foreach my $match_rec (@results) {
-                    # Add each ambiguous record to the CSV log with the ID and name
-                    # information. Put the student ID in the the ID field along with the
-                    # matching record ID, so the CSV can be storted appropriately. Add
-                    # name and streets from matching records.
-                    my @message_parts = ();
-                    push(@message_parts, qq|"Ambiguous","DOB and Street"|);
-                    push(@message_parts, qq|"$student->{'barcode'}, $match_rec->{'key'}"|);
-                    if (defined $match_rec->{'fields'}->{'firstName'}) {
-                        push(@message_parts, qq|"$match_rec->{'fields'}->{'firstName'}"|);
-                    }
-                    if (defined $match_rec->{'fields'}->{'middleName'}) {
-                        push(@message_parts, qq|"$match_rec->{'fields'}->{'middleName'}"|);
-                    }
-                    if (defined $match_rec->{'fields'}->{'lastName'}) {
-                        push(@message_parts, qq|"$match_rec->{'fields'}->{'lastName'}"|);
-                    }
-                    $csv_logger->info(join(',', @message_parts));
-                    logger('debug', "Ambiguous match details: " . Dumper($match_rec));
+            my %dob_keys;
+            # Store all keys from the DOB search in a hash for O(1) lookup.
+            foreach my $rec (@{$bydob_result->{'result'}}) {
+                $dob_keys{$rec->{'key'}} = $rec;
+            }
+
+            my $i = 0;
+            # Iterate through the street results and check for matches in the hash.
+            foreach my $rec2 (@{$bystreet_result->{'result'}}) {
+                if (exists $dob_keys{$rec2->{'key'}}) {
+                    # Match found, add it to results
+                    $results{'result'}[$i] = $rec2; # Copy the whole record
+                    $i++;
                 }
             }
+            $results{'totalResults'} = $i;
         }
     }
 
-    # Return a reference to the @results array
-    return \@results;
+    # Return a reference to the %results hash
+    return \%results;
 }
 
-# Compare result sets from ILSWS searches and return array of record hashes
-# where the records share the same user key
-sub compare_results {
-    my ($set1_ref, $set2_ref) = @_;
+# Compare a student's names with those from a search result to see if they are the same
+sub same_names {
+    my ($student, $search) = @_;
+    my $retval = 0;
 
-    my @common_results = ();
-
-    # Ensure inputs are array references
-    unless (ref $set1_ref eq 'ARRAY' && ref $set2_ref eq 'ARRAY') {
-        logger('error', "compare_results received non-array references.");
-        return ();
+    my $student_names = normalize_name($student->{'firstName'}, $student->{'middleName'} // '', $student->{'lastName'});
+    my $search_names = normalize_name(
+        $search->{'result'}->[0]->{'fields'}->{'firstName'}, 
+        $search->{'result'}->[0]->{'fields'}->{'middleName'}, 
+        $search->{'result'}->[0]->{'fields'}->{'lastName'}
+    );
+    if ($student_names eq $search_names) {
+        $retval = 1;
     }
+    return $retval;
+}
 
-    my %keys_in_set1;
-    foreach my $rec (@$set1_ref) {
-        if (defined $rec && defined $rec->{'key'}) {
-            $keys_in_set1{$rec->{'key'}} = $rec;
-        }
-    }
+# Trim whitespace, change to lowercase, and combine names
+sub normalize_name {
+    my ($fname, $mname, $lname) = @_;
 
-    foreach my $rec (@$set2_ref) {
-        if (defined $rec && defined $rec->{'key'} && exists $keys_in_set1{$rec->{'key'}}) {
-            # Found a common record, add it to results
-            push @common_results, {
-                key    => $rec->{'key'},
-                fields => {
-                    barcode    => $rec->{'fields'}->{'barcode'} // '',
-                    firstName  => $rec->{'fields'}->{'firstName'} // '',
-                    middleName => $rec->{'fields'}->{'middleName'} // '',
-                    lastName   => $rec->{'fields'}->{'lastName'} // '',
-                },
-            };
-        }
-    }
+    return lc(trim($fname)) . lc(trim($mname)) . lc(trim($lname));
+}
 
-    return @common_results;
+# Trim leading or trailing whitespace
+sub trim {
+    my $string = shift;
+    if ($string) {
+        $string =~ s/^\s+|\s+$//g;
+    $string = '' unless defined $string;
+    $string =~ s/^\s+|\s+$//g;
+    return $string;
 }
 
 # Create new student record
@@ -596,9 +605,17 @@ sub create_student {
         };
 
         if ($@) {
-            logger('error', "Exception during ILSWS::patron_create for " . ($student->{'barcode'} // 'N/A') . " (line $lineno) on attempt $retries: $@");
+            logger('error', "Exception during ILSWS::patron_create for " 
+                . ($student->{'barcode'} // 'N/A') 
+                . " (line $lineno) on attempt $retries: $@");
         } elsif (!defined $res || ($ILSWS::code && $ILSWS::code != 200)) {
-            logger('error', "Failed to create " . ($student->{'barcode'} // 'N/A') . " (line $lineno) on attempt $retries: " . ($ILSWS::code // 'N/A') . ": " . ($ILSWS::error // 'No specific error message.') . " Data: " . print_line($student));
+            logger('error', "Failed to create " 
+                . ($student->{'barcode'} // 'N/A') 
+                . " (line $lineno) on attempt $retries: " 
+                . ($ILSWS::code // 'N/A') 
+                . ": " 
+                . ($ILSWS::error // 'No specific error message.') 
+                . " Data: " . print_line($student));
         } else {
             $create_success = 1; # Mark as success
         }
@@ -611,10 +628,18 @@ sub create_student {
 
     if ($create_success) {
         # We created a patron. Log the event.
-        $csv_logger->info(qq|"Create","","| . print_line($student));
-        logger('debug', "CREATE: " . ($student->{'lastName'} // 'N/A') . ", " . ($student->{'firstName'} // 'N/A') . " (" . ($student->{'barcode'} // 'N/A') . ") created.");
+        $csv_logger->info(qq|"Create","",| . print_line($student));
+        logger('debug', "CREATE: " 
+            . ($student->{'lastName'} // 'N/A') 
+            . ", " 
+            . ($student->{'firstName'} // 'N/A') 
+            . " (" 
+            . ($student->{'barcode'} // 'N/A') 
+            . ") created.");
     } else {
-        logger('error', "Persistent failure to create patron " . ($student->{'barcode'} // 'N/A') . " after $max_retries attempts.");
+        logger('error', "Persistent failure to create patron " 
+            . ($student->{'barcode'} // 'N/A') 
+            . " after $max_retries attempts.");
     }
 }
 
@@ -769,7 +794,6 @@ sub create_data_structure {
                     fields   => {
                         code => {
                             resource => '/policy/patronAddress1',
-                            key      => $resource_map{$field_name} // die "Unknown address resource map for $field_name",
                             key      => do {
                                 my $mapped_key = $resource_map{$field_name};
                                 unless (defined $mapped_key) {
@@ -779,6 +803,7 @@ sub create_data_structure {
                                 }
                                 $mapped_key;
                             },
+                        },
                         data => $current_student_data{$field_name},
                     },
                 );
