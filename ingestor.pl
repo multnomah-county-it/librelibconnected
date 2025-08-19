@@ -568,10 +568,13 @@ sub normalize_name {
 # Trim leading or trailing whitespace
 sub trim {
     my $string = shift;
-    if ($string) {
-        $string =~ s/^\s+|\s+$//g;
-    $string = '' unless defined $string;
+    
+    # If the input is undefined, return an empty string.
+    return '' unless defined $string;
+
+    # Remove leading and trailing whitespace from the string.
     $string =~ s/^\s+|\s+$//g;
+
     return $string;
 }
 
