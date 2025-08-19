@@ -462,7 +462,11 @@ sub process_student {
             my @message_parts = ();
             push(@message_parts, qq|"Ambiguous Match Detail","DOB and Street"|);
             push(@message_parts, qq|"$student->{'barcode'}, $match_rec->{'key'}"|);
-            # ... (add other fields like firstName, lastName etc. as in the original) ...
+            # Add other fields like firstName, lastName, dob, street, etc.
+            push(@message_parts, qq|"$student->{'firstName'}, $match_rec->{'firstName'}"|);
+            push(@message_parts, qq|"$student->{'lastName'}, $match_rec->{'lastName'}"|);
+            push(@message_parts, qq|"$student->{'dob'}, $match_rec->{'dob'}"|);
+            push(@message_parts, qq|"$student->{'street'}, $match_rec->{'street'}"|);
             $csv_logger->info(join(',', @message_parts));
             logger('debug', "Ambiguous match details: " . Dumper($match_rec));
         }
