@@ -446,7 +446,7 @@ sub process_student {
     if (defined $dob_street_matches && $dob_street_matches->{'totalResults'} == 1 && $dob_street_matches->{'result'}->[0]->{'key'} > 0) {
         if (same_names($student, $dob_street_matches)) {
             $dob_street_cnt++;
-            update_student($token, $client, $student, $dob_street_matches->[0]->{'key'}, 'DOB and Street');
+            update_student($token, $client, $student, $dob_street_matches->{'result'}->[0]->{'key'}, 'DOB and Street');
             $update_cnt++;
         } else {
             create_student($token, $client, $student);
@@ -458,7 +458,7 @@ sub process_student {
         logger('debug', qq|"AMBIGUOUS:","DOB and Street",| . print_line($student));
         $csv_logger->info(qq|"Ambiguous","DOB and Street",| . print_line($student));
         $ambiguous_cnt++;
-        foreach my $match_rec (@{$dob_street_matches}) {
+        foreach my $match_rec (@{$dob_street_matches->{'result'}}) {
             my @message_parts = ();
             push(@message_parts, qq|"Ambiguous Match Detail","DOB and Street"|);
             push(@message_parts, qq|"$student->{'barcode'}, $match_rec->{'key'}"|);
