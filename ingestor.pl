@@ -514,20 +514,22 @@ sub search_by_name_dob_and_street {
             # Compare the two result sets to see if we can find the same student
             # in both the DOB and street result sets
 
-            # Compare normalized names for each result to see if we've got the same student 
-            my $i = 0;
+            my %dob_keys;
+            # Store all keys from the DOB search in a hash for O(1) lookup.
             foreach my $rec (@{$bydob_result->{'result'}}) {
-                foreach my $rec2 (@{$bystreet_result->{'result'}}) {
-                    if (defined $rec->{'key'} && defined $rec2->{'key'} && $rec->{'key'} == $rec2->{'key'}) {
-                        $results{'result'}[$i]{'key'} = $rec2->{'key'};
-                        $results{'result'}[$i]{'fields'}{'firstName'} = $rec2->{'fields'}->{'firstName'} // '';
-                        $results{'result'}[$i]{'fields'}{'middleName'} = $rec2->{'fields'}->{'middleName'} // '';
-                        $results{'result'}[$i]{'fields'}{'lastName'} = $rec2->{'fields'}->{'lastName'} // '';
-                        $i++;
-                        $results{'totalResults'} = $i;
-                    }
+                $dob_keys{$rec->{'key'}} = $rec;
+            }
+
+            my $i = 0;
+            # Iterate through the street results and check for matches in the hash.
+            foreach my $rec2 (@{$bystreet_result->{'result'}}) {
+                if (exists $dob_keys{$rec2->{'key'}}) {
+                    # Match found, add it to results
+                    $results{'result'}[$i] = $rec2; # Copy the whole record
+                    $i++;
                 }
             }
+            $results{'totalResults'} = $i;
         }
     }
 
