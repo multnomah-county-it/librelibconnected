@@ -399,7 +399,11 @@ sub process_student {
     };
     if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
         logger('error', "ILSWS::patron_alt_id_search failed for '$patron_id': " . ($ILSWS::error // $@));
-    } elsif (defined $existing_alt_id_result && $existing_alt_id_result->{'totalResults'} == 1 && $existing_alt_id_result->{'result'}->[0]->{'key'} > 0) {
+    } elsif (defined $existing_alt_id_result 
+        && $existing_alt_id_result->{'totalResults'} == 1 
+        && defined $existing_alt_id_result->{'result'}->[0]->{'key'}
+        && $existing_alt_id_result->{'result'}->[0]->{'key'} > 0) {
+
         $alt_id_cnt++;
         update_student($token, $client, $student, $existing_alt_id_result->{'result'}->[0]->{'key'}, 'Alt ID');
         $update_cnt++;
@@ -415,7 +419,11 @@ sub process_student {
         };
         if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
             logger('error', "ILSWS::patron_search (EMAIL) failed for '$student->{'email'}': " . ($ILSWS::error // $@));
-        } elsif (defined $existing_email_result && $existing_email_result->{'totalResults'} == 1 && $existing_email_result->{'result'}->[0]->{'key'} > 0) {
+        } elsif (defined $existing_email_result 
+            && $existing_email_result->{'totalResults'} == 1 
+            && defined $existing_email_result->{'result'}->[0]->{'key'}
+            && $existing_email_result->{'result'}->[0]->{'key'} > 0) {
+
             if (same_names($student, $existing_email_result->{'result'}->[0])) {
                 $email_cnt++;
                 update_student($token, $client, $student, $existing_email_result->{'result'}->[0]->{'key'}, 'Email');
@@ -433,7 +441,11 @@ sub process_student {
     };
     if ($@ || ($ILSWS::code && $ILSWS::code != 200)) {
         logger('error', "ILSWS::patron_barcode_search failed for '$patron_id': " . ($ILSWS::error // $@));
-    } elsif (defined $existing_barcode_result && $existing_barcode_result->{'totalResults'} == 1 && $existing_barcode_result->{'result'}->[0]->{'key'} > 0) {
+    } elsif (defined $existing_barcode_result 
+        && $existing_barcode_result->{'totalResults'} == 1 
+        && defined $existing_barcode_result->{'result'}->[0]->{'key'}
+        && $existing_barcode_result->{'result'}->[0]->{'key'} > 0) {
+
         $id_cnt++;
         update_student($token, $client, $student, $existing_barcode_result->{'result'}->[0]->{'key'}, 'ID');
         $update_cnt++;
@@ -443,7 +455,11 @@ sub process_student {
     # 4. Search by DOB and street
     my $dob_street_matches = search_by_name_dob_and_street($token, $client, $student);
 
-    if (defined $dob_street_matches && $dob_street_matches->{'totalResults'} == 1 && $dob_street_matches->{'result'}->[0]->{'key'} > 0) {
+    if (defined $dob_street_matches 
+        && $dob_street_matches->{'totalResults'} == 1 
+        && defined $dob_street_matches->{'result'}->[0]->{'key'} 
+        && $dob_street_matches->{'result'}->[0]->{'key'} > 0) {
+
         if (same_names($student, $dob_street_matches)) {
             $dob_street_cnt++;
             update_student($token, $client, $student, $dob_street_matches->{'result'}->[0]->{'key'}, 'DOB and Street');
@@ -521,13 +537,15 @@ sub search_by_name_dob_and_street {
             my %dob_keys;
             # Store all keys from the DOB search in a hash for O(1) lookup.
             foreach my $rec (@{$bydob_result->{'result'}}) {
-                $dob_keys{$rec->{'key'}} = $rec;
+                if (defined $rec->{'key'}) {
+                    $dob_keys{$rec->{'key'}} = $rec;
+                }
             }
 
             my $i = 0;
             # Iterate through the street results and check for matches in the hash.
             foreach my $rec2 (@{$bystreet_result->{'result'}}) {
-                if (exists $dob_keys{$rec2->{'key'}}) {
+                if (defined $rec2->{'key'} && exists $dob_keys{$rec2->{'key'}}) {
                     # Match found, add it to results
                     $results{'result'}[$i] = $rec2; # Copy the whole record
                     $i++;
