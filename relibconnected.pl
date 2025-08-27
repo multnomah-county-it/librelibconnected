@@ -136,7 +136,7 @@ sub wanted {
         # executed by the shell, mitigating command injection risks.
         #
         system( $ingestor, $config_file, $untainted_path ) == 0
-            or handle_error($?);
+            or handle_error($?, $untainted_path);
 
         warn "Ingestor completed successfully for $untainted_path.\n";
         $found_file = 1;
@@ -144,7 +144,7 @@ sub wanted {
 }
 
 sub handle_error {
-    my $error = shift;
+    my ($error, $untainted_path) = @_;
     # The return value of system() is complex. We check the actual exit
     # value, which is in the upper 8 bits of $?.
     my $actual_exit = $error >> 8;
