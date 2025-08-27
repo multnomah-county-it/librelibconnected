@@ -24,7 +24,7 @@ use File::Spec;
 use Fcntl qw(:DEFAULT :flock); # For file constants and locking
 
 # --- Configuration ---
-$ENV{'PATH'} = '/bin:/usr/bin:/usr/local/bin';
+$ENV{'PATH'} = '/bin:/usr/bin:/usr/sbin:/usr/local/bin';
 
 # File paths are defined here.
 my $srv_path  = '/srv/libconnected';
