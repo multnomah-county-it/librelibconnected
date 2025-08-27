@@ -135,20 +135,20 @@ sub wanted {
         # special characters in the filename from being interpreted and
         # executed by the shell, mitigating command injection risks.
         #
-        my $exit_code = system( $ingestor, $config_file, $untainted_path );
+        system( $ingestor, $config_file, $untainted_path ) == 0
+            or handle_error($?, $untainted_path);
 
-        if ( $exit_code == 0 ) {
-            warn "Ingestor completed successfully for $untainted_path.\n";
-            # Set flag to stop find from searching for more files.
-            $found_file = 1;
-        }
-        else {
-            # The return value of system() is complex. We check the actual exit
-            # value, which is in the upper 8 bits of $?.
-            my $actual_exit = $? >> 8;
-            warn "ERROR: Ingestor script '$ingestor' failed for file '$untainted_path' with exit code $actual_exit.\n";
-        }
+        warn "Ingestor completed successfully for $untainted_path.\n";
+        $found_file = 1;
     }
+}
+
+sub handle_error {
+    my ($error, $untainted_path) = @_;
+    # The return value of system() is complex. We check the actual exit
+    # value, which is in the upper 8 bits of $?.
+    my $actual_exit = $error >> 8;
+    warn "ERROR: Ingestor script '$ingestor' failed for file '$untainted_path' with exit code $actual_exit.\n";
 }
 
 exit 0;
