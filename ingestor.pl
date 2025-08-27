@@ -269,7 +269,7 @@ while (my $student_record = $parser->fetch) {
 
     if ($errors_in_record > 0) {
         # We got errors when validating this student's data, so log and skip
-        logger('error', "Skipping " 
+        logger('warn', "Skipping " 
             . ($student_record->{'lastName'} // 'N/A') 
             . ", " 
             . ($student_record->{'firstName'} // 'N/A') 
