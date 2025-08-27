@@ -865,7 +865,11 @@ sub logger {
     if ($level eq 'warn' || $level eq 'error' || $level eq 'fatal') {
         # Add the calling package and line number to errors
         my ($package, $filename, $line) = caller(1); # Get caller's context
-        $log->$level("$package:${line}: $message");
+        if (defined($package)) {
+            $log->$level("$package:${line}: $message");
+        } else {
+            $log->$level("main:${line}: $message");
+        }
     } else {
         $log->$level($message);
     }
