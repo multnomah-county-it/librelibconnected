@@ -845,10 +845,10 @@ sub error_handler {
 
     # Add caller info only if not already done by logger sub
     my ($package, $filename, $line) = caller;
-    if (defined($package)) {
+    if (defined($package) && defined($line)) {
         $log->error("$package:${line}: $message");
     } else {
-        $log->error("main:${line}: $message");
+        $log->error("main:unknown: $message");
     }
 
     exit(EXIT_FAILURE);
@@ -865,10 +865,10 @@ sub logger {
     if ($level eq 'warn' || $level eq 'error' || $level eq 'fatal') {
         # Add the calling package and line number to errors
         my ($package, $filename, $line) = caller(1); # Get caller's context
-        if (defined($package)) {
+        if (defined($package) && defined($line)) {
             $log->$level("$package:${line}: $message");
         } else {
-            $log->$level("main:${line}: $message");
+            $log->$level("main:unknown: $message");
         }
     } else {
         $log->$level($message);
