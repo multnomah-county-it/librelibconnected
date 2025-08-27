@@ -259,7 +259,7 @@ while (my $student_record = $parser->fetch) {
             if ($field_name eq 'email' && $client_config->{'fields'}->{'email'}->{'allow_null'}) {
                 $student_record->{$field_name} = 'null';
             } else {
-                logger('error', "Invalid data in line $lineno, field '$field_name': '" . ($student_record->{$field_name} // '') . "'");
+                logger('warn', "Invalid data in line $lineno, field '$field_name': '" . ($student_record->{$field_name} // '') . "'");
                 $errors_in_record++;
             }
         } else {
@@ -845,7 +845,11 @@ sub error_handler {
 
     # Add caller info only if not already done by logger sub
     my ($package, $filename, $line) = caller;
-    $log->error("$package:${line}: $message");
+    if (defined($package)) {
+        $log->error("$package:${line}: $message");
+    } else {
+        $log->error("main:${line}: $message");
+    }
 
     exit(EXIT_FAILURE);
 }
