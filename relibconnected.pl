@@ -74,16 +74,12 @@ unless ( flock( $lock_fh, LOCK_EX | LOCK_NB ) ) {
 # A file has been found that triggers the ingestor. We will stop searching.
 my $found_file = 0;
 
+# **FIX:** The find call is now more idiomatic, passing a direct reference
+# to the processing subroutine (&process_file) instead of using a confusing
+# wrapper.
 find(
     {
-        wanted => sub {
-            # Stop searching if we've already found and processed a file.
-            return if $found_file;
-            
-            # Call original wanted subroutine for the item.
-            # No need for prune logic here anymore.
-            &wanted;
-        },
+        wanted     => \&process_file,
         preprocess => sub {
             # Return a list of only the non-hidden directory entries.
             # This prevents File::Find from ever trying to access a
@@ -99,21 +95,25 @@ find(
 #
 # Section 3: Clean up the lock file.
 #
-# This code will always run, even if the script dies, ensuring we don't
+# This code will always run when the script exits, ensuring we don't
 # leave a stale lock file behind.
+#
 END {
-    if ($lock_fh) {
+    if (defined $lock_fh) {
         close($lock_fh);
-        # The unlink operation requires an untainted variable.
-        # We know $lock_file is safe as it's defined internally.
-        if ( $lock_file =~ /^(.*)$/ ) {
-            unlink $1 or warn "Could not remove lock file: $lock_file: $!";
-        }
+        # **FIX:** The unlink operation failed because of the unnecessary and
+        # fragile regex used to "untaint" a variable that was never tainted.
+        # We now use the safe, original $lock_file variable directly.
+        unlink $lock_file or warn "Could not remove lock file: $lock_file: $!";
     }
 }
 
-# Subroutine called by File::Find for each item found.
-sub wanted {
+# **FIX:** Renamed 'wanted' to 'process_file' for clarity and to avoid
+# potential conflicts or confusion with File::Find's own functions.
+sub process_file {
+    # Stop processing if we've already found and processed a file.
+    return if $found_file;
+    
     # $File::Find::name contains the full path to the file.
     # We only care about files, not directories. The regex check for .csv
     # effectively handles this.
@@ -127,7 +127,6 @@ sub wanted {
         warn "Found data file: $untainted_path\n";
         warn "Starting ingestor process...\n";
 
-        #
         # Securely run the ingestor script.
         #
         # We use the list form of system(). This passes arguments directly to
