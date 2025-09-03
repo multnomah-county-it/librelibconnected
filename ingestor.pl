@@ -521,7 +521,7 @@ sub same_names {
 
 # Trim whitespace, change to lowercase, and combine names
 sub normalize_name {
-    my ($fname, $mname, $lname) = @_;
+    my ($fname, $lname) = @_;
 
     return lc(trim($fname)) . lc(trim($lname));
 }
