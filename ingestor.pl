@@ -285,7 +285,6 @@ unless (@report_addresses) {
 # Verify that log files exist and are not empty before attempting to email them.
 if ( defined $mail_log && -s $mail_log && defined $csv_file && -s $csv_file ) {
 
-    # >>> ENTIRE EMAIL SECTION REPLACED <<<
     try {
         # 1. Create the main email object with headers
         my $msg = MIME::Lite->new(
@@ -324,7 +323,7 @@ if ( defined $mail_log && -s $mail_log && defined $csv_file && -s $csv_file ) {
     } catch {
         error_handler("Could not email logs: $_"); # $_ contains the exception message
     };
-    # >>> END OF REPLACEMENT <<<
+
 } else {
     logger('warn', "Skipping email report: one or more log files are missing or empty.");
 }
@@ -386,7 +385,7 @@ sub process_student {
 
     # 2. Check by Email
     if ($student->{'email'} && $student->{'email'} ne 'null') {
-        %options = ( ct => 2, includeFields => 'firstName,middleName,lastName' );
+        %options = ( ct => 2, includeFields => 'firstName,lastName' );
         my $existing_email_result;
         eval {
             $existing_email_result = ILSWS::patron_search($token, 'EMAIL', $student->{'email'}, \%options);
@@ -449,7 +448,7 @@ sub search_by_name_dob_and_street {
     my ($year, $mon, $day) = split /\-/, transform_birthDate($student->{'birthDate'}, $client, $student);
     my %options = (
         ct            => 20,
-        includeFields => 'firstName,middleName,lastName'
+        includeFields => 'firstName,lastName'
     );
 
     my $bydob_result;
@@ -509,10 +508,9 @@ sub same_names {
     my ($student, $search) = @_;
     my $retval = 0;
 
-    my $student_names = normalize_name($student->{'firstName'}, $student->{'middleName'} // '', $student->{'lastName'});
+    my $student_names = normalize_name($student->{'firstName'}, $student->{'lastName'});
     my $search_names = normalize_name(
         $search->{'result'}->[0]->{'fields'}->{'firstName'}, 
-        $search->{'result'}->[0]->{'fields'}->{'middleName'}, 
         $search->{'result'}->[0]->{'fields'}->{'lastName'}
     );
     if ($student_names eq $search_names) {
@@ -525,7 +523,7 @@ sub same_names {
 sub normalize_name {
     my ($fname, $mname, $lname) = @_;
 
-    return lc(trim($fname)) . lc(trim($mname)) . lc(trim($lname));
+    return lc(trim($fname)) . lc(trim($lname));
 }
 
 # Trim leading or trailing whitespace
