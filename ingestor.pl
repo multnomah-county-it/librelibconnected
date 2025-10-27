@@ -1082,7 +1082,6 @@ sub transform_pin {
 # Selects profile based on age (adult_profile if >= 12 years old)
 sub transform_profile {
     my ($value, $client, $student, $existing) = @_; # $value, $client, $existing not used, but for consistency
-
     my $birthDate = $student->{'birthDate'} // '';
     if (defined $birthDate && $birthDate =~ /^(\d{4})-(\d{2})-(\d{2})$/) {
         my ($year1, $month1, $day1) = ($1, $2, $3);
@@ -1092,7 +1091,7 @@ sub transform_profile {
         if (($day1 == 29) && ($month1 == 2) && !leap_year($year2)) { $day1--; }
 
         # Calculate age and apply adult profile if 12 or older
-        if ((($year2 - $year1) > 12) || ((($year2 - $year1) == 12) && (Delta_Days($year2, $month1, $day1, $year2, $month2, $day2) >= 0))) {
+        if ((($year2 - $year1) > 13) || ((($year2 - $year1) == 13) && (Delta_Days($year2, $month1, $day1, $year2, $month2, $day2) >= 0))) {
             $value = $yaml->[0]->{'adult_profile'};
         } else {
             # Retain existing value or default if not adult profile
