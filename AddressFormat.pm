@@ -155,20 +155,20 @@ sub format_street {
     $value =~ s/\s+building(?=\s|$)/ Bldg/gi;
 
     # Complex Street Corrections (order sensitive)
-    $value =~ s/Ct Ave/Court Ave/gi; # e.g., "Court Ave" instead of "Ct Ave"
-    $value =~ s/Ct St/Court St/gi;
-    $value =~ s/Dr Pl(?=\s|$)/Drive Pl/gi;
-    $value =~ s/Ln Ave/Lane Ave/gi;
-    $value =~ s/Ln St/Lane St/gi;
-    $value =~ s/Rd Loop(?=\s|$)/Road Loop/gi;
-    $value =~ s/St Loop(?=\s|$)/Street Loop/gi;
-    $value =~ s/St Dr(?=\s|$)/Street Dr/gi;
-    $value =~ s/St Ct(?=\s|$)/Street Ct/gi;
-    $value =~ s/Ter Ave(?=\s|$)/Terrace Ave/gi;
-    $value =~ s/Ter Ct(?=\s|$)/Terrace Ct/gi;
-    $value =~ s/Ter Dr(?=\s|$)/Terrace Dr/gi;
-    $value =~ s/Ter Trails(?=\s|$)/Terrace Trails/gi;
-    $value =~ s/Ter View(?=\s|$)/Terrace View/gi;
+    $value =~ s/\bCt Ave\b/Court Ave/gi; # e.g., "Court Ave" instead of "Ct Ave"
+    $value =~ s/\bCt St\b/Court St/gi;
+    $value =~ s/\bDr Pl(?=\s|$)/Drive Pl/gi;
+    $value =~ s/\bLn Ave\b/Lane Ave/gi;
+    $value =~ s/\bLn St\b/Lane St/gi;
+    $value =~ s/\bRd Loop(?=\s|$)/Road Loop/gi;
+    $value =~ s/\bSt Loop(?=\s|$)/Street Loop/gi;
+    $value =~ s/\bSt Dr(?=\s|$)/Street Dr/gi;
+    $value =~ s/\bSt Ct(?=\s|$)/Street Ct/gi;
+    $value =~ s/\bTer Ave(?=\s|$)/Terrace Ave/gi;
+    $value =~ s/\bTer Ct(?=\s|$)/Terrace Ct/gi;
+    $value =~ s/\bTer Dr(?=\s|$)/Terrace Dr/gi;
+    $value =~ s/\bTer Trails(?=\s|$)/Terrace Trails/gi;
+    $value =~ s/\bTer View(?=\s|$)/Terrace View/gi;
     $value =~ s/Par 4th Dr$/Par 4 Dr/gi; # Specific fix
     $value =~ s/Pkwy Ct$/Parkway Ct/gi;
 
