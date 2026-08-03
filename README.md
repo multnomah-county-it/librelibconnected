@@ -362,3 +362,37 @@ Logging is driven by `Log::Log4perl` using the configuration in `log.conf`:
 - **Mail Summary Log**: Generated per run at `/opt/librelibconnected/log/mail.log` and attached to report emails.
 - **CSV Audit Log**: Generated per run at `/opt/librelibconnected/log/ingestor.csv` detailing actions taken (`create`, `update`, `skip`) for each record.
 - **Email Notification**: On completion, `ingestor.pl` compiles the run statistics and emails `mail.log` and `ingestor.csv` via `MIME::Lite`.
+# Configuration Notes
+
+## Field Definition Keywords
+When configuring client districts, a number of keywords may be used 
+to define the way the software will handle incoming data and derivative fields:
+* `type`: Symphony field type (used to determine data structure needed in JSON)
+* `overlay`: If true, update field when updating existing record
+* `validate`: Field validation rule to apply to incoming data (ingestor will throw error and skip record if validation fails)
+* `transform`: Transformation function (in ingestor.pl) which takes validated input from one or more fields in the incoming or existing record data and returns a valid value
+* `overlay_default`: Value to use in update IF FIELD CURRENTLY EMPTY
+* `overlay_value`: Value to ALWAYS overlay existing value during update
+* `new_default`: Value to use in create IF FIELD CURRENTLY EMPTY
+* `new_value`: Value to be used during new create
+
+## Validation Rules
+
+Sample validation rules used in conjunction with the validate field definition keyword:
+| Type           | Example              | Comments                 |
+| ---            | ---                  | ---                      |
+| Date1          | "d:YYYY-MM-DD"       |                          |
+| Date2          | "d:YYYY/MM/DD"       |                          |
+| Date3          | "d:MM-DD-YYYY"       |                          |
+| Date4          | "d:MM/DD/YYYY"       |                          |
+| Timestamp1     | "d:YYYY/MM/DD HH:MM" |                          |
+| Timestamp2     | "d:YYYY-MM-DD HH:MM" |                          |
+| Timestamp3     | "d:YYYYMMDDHHMMSS"   |                          |
+| Integer        | "i:8"                | Length of 8              |
+| String         | "s:256"              | Max length of 256        |
+| List           | "v:01\|11"            | Pipe delimited list of valid entries |
+| Blank          | "b"                  | Must be blank            |
+| Decimal number | "n:3.2"              | Number(000.00)           |
+| Integer range  | "r:1,9999"           | Range between 1 and 9999 |
+
+Note: All dates will be validated against the calendar
