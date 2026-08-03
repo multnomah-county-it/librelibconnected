@@ -238,7 +238,7 @@ The `bin/` directory contains administrative tools:
 | `create_checksum_db.pl` | Setup (Root) | `sudo bin/create_checksum_db.pl CONFIG_FILE MYSQL_ROOT_PASS` | Creates the MySQL database, application user, grants privileges, and initializes the `checksums` table. |
 | `create_new_user.pl` | Setup (Root) | `sudo bin/create_new_user.pl CONFIG_FILE` | Creates district system user accounts, `sftponly` group, directory trees under `/srv/libconnected`, and SSH `authorized_keys`. |
 | `remove_old_checksums.pl` | Cron / Admin | `bin/remove_old_checksums.pl CONFIG_FILE` | Deletes MD5 checksum entries older than `max_checksum_age` (from `config.yaml`), forcing full re-checks on next upload. |
-| `randomize_checksum_ages.pl` | Admin | `bin/randomize_checksum_ages.pl CONFIG_FILE` | Randomly adjusts `date_added` in `checksums` by up to ±30 days to stagger record expiration dates and avoid update spikes. |
+| `randomize_checksum_ages.pl` | Admin | `bin/randomize_checksum_ages.pl CONFIG_FILE` | Randomly adjusts `date_added` in `checksums` by up to ±29 days to stagger record expiration dates and avoid update spikes. |
 | `report_checksum_dates.pl` | Admin | `bin/report_checksum_dates.pl CONFIG_FILE` | Summarizes and prints record count totals grouped by `date_added` in the checksum database. |
 | `stuck_warn.pl` | Cron / Admin | `bin/stuck_warn.pl` | Scans `/srv/libconnected` for incoming CSV files older than 90 minutes and emails an administrative warning. |
 | `stuck_clear.pl` | Admin | `bin/stuck_clear.pl` | Recovers from stale lock/flag states, archives older logs with timestamps, and notifies administration. |
